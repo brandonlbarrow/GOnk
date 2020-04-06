@@ -10,9 +10,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// GuildID - the ID of the Discord Server
-var GuildID string
-
 func init() {
 	if err := godotenv.Load(); err != nil {
 		fmt.Println("No .env file found")
@@ -32,7 +29,7 @@ func main() {
 		return
 	}
 
-	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
+	fmt.Println("GOnk bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
@@ -55,9 +52,4 @@ func initialize() *discordgo.Session {
 	session.StateEnabled = true
 
 	return session
-}
-
-func getGuildID(s *discordgo.Session) string {
-
-	return s.State.Guilds[0].ID
 }

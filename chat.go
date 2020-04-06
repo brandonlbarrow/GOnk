@@ -8,39 +8,17 @@ import (
 
 func chatHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 
-	GuildID := getGuildID(s)
-
 	// Ignore all messages created by the bot itself
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
 
 	if m.Content == "whoami" {
-		usr := m.Author.ID
-		usr2, err := s.User(usr)
+		user, err := s.User(m.Author.ID)
 		if err != nil {
 			fmt.Println(err)
 		}
-		s.ChannelMessageSend(m.ChannelID, usr2.Mention())
-	}
-
-	if m.Content == "guildid" {
-		s.ChannelMessageSend(m.ChannelID, GuildID)
-	}
-
-	if m.Content == "start" {
-		s.UpdateStreamingStatus(0, "Twitch", "http://www.twitch.tv/gonk")
-	}
-
-	if m.Content == "end" {
-		s.UpdateStreamingStatus(0, "", "")
-	}
-
-	if m.Content == "list" {
-		members := listMembers(s, GuildID)
-		for _, member := range members {
-			s.ChannelMessageSend(m.ChannelID, member.User.Username)
-		}
+		s.ChannelMessageSend(m.ChannelID, user.Mention())
 	}
 }
 
