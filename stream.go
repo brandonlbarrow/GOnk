@@ -9,7 +9,13 @@ import (
 
 func streamHandler(s *discordgo.Session, m *discordgo.PresenceUpdate) {
 
-	if m.Presence.Nick != "" {
+	guildID, exists := os.LookupEnv("GUILD_ID")
+	if !exists {
+		fmt.Println("Cannot find env variable GUILD_ID. Please ensure this is set to use gonk.")
+		os.Exit(1)
+	}
+
+	if m.GuildID == guildID {
 		if m.Game != nil {
 			updateChannel(s, m)
 		}
@@ -30,7 +36,11 @@ func updateChannel(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 		}
 
 		user := getUser(s, p.Presence.User.ID)
-		messageBody := formatMessage(user, p.Game.Details, p.Game.URL)
+		if p.Nick != "" {
+			user = p.Nick
+		}
+
+		messageBody := formatMessage(user, p.Game.State, p.Game.Details, p.Game.URL)
 		s.ChannelMessageSend(streamChannel, messageBody)
 	}
 }
@@ -42,12 +52,13 @@ func getUser(s *discordgo.Session, usrID string) string {
 		fmt.Println("Could not find user with id " + usrID)
 		os.Exit(1)
 	}
+
 	return user.Username
 }
 
-func formatMessage(user string, details string, url string) string {
+func formatMessage(user string, assets string, details string, url string) string {
 
-	message := "~STREAM TIME~!\n" + user + " ~went~ ~live~!\n" + details + "\n" + url
+	message := "~STREAM TIME~!\n" + "**" + user + "**" + " ~went live with~ " + "**" + assets + "**" + "!\n" + details + "\n" + url
 
 	return message
 }
