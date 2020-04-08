@@ -16,7 +16,7 @@ func streamHandler(s *discordgo.Session, m *discordgo.PresenceUpdate) {
 	}
 
 	if m.GuildID == guildID {
-		if m.Game != nil {
+		if m.Presence.Game.Type == 1 {
 			updateChannel(s, m)
 		}
 	}
