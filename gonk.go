@@ -20,7 +20,6 @@ func init() {
 func main() {
 
 	discord := initialize()
-	discord.AddHandler(chatHandler)
 	discord.AddHandler(streamHandler)
 
 	err := discord.Open()

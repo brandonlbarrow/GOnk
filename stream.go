@@ -15,6 +15,10 @@ func streamHandler(s *discordgo.Session, m *discordgo.PresenceUpdate) {
 		os.Exit(1)
 	}
 
+	if m.Game == nil {
+		return
+	}
+
 	if m.GuildID == guildID {
 		if m.Presence.Game.Type == 1 {
 			updateChannel(s, m)
@@ -23,10 +27,6 @@ func streamHandler(s *discordgo.Session, m *discordgo.PresenceUpdate) {
 }
 
 func updateChannel(s *discordgo.Session, p *discordgo.PresenceUpdate) {
-
-	if p.Game == nil {
-		return
-	}
 
 	if p.Game.Name == "Twitch" {
 		streamChannel, exists := os.LookupEnv("STREAM_CHANNEL")
