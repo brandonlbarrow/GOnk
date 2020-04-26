@@ -7,39 +7,65 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func streamHandler(s *discordgo.Session, m *discordgo.PresenceUpdate) {
+// StreamList map of maps containing all stream activity
+var StreamList = make(map[string]map[string]bool)
+
+func streamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 
 	guildID, exists := os.LookupEnv("GUILD_ID")
 	if !exists {
 		fmt.Println("Cannot find env variable GUILD_ID. Please ensure this is set to use gonk.")
-		os.Exit(1)
-	}
-
-	if m.Game == nil {
 		return
 	}
 
-	if m.GuildID == guildID {
-		if m.Presence.Game.Type == 1 {
-			updateChannel(s, m)
+	streamChannel, exists := os.LookupEnv("STREAM_CHANNEL")
+	if !exists {
+		fmt.Println("Cannot find env variable STREAM_CHANNEL. Please ensure this is set to use streaming alerts.")
+		return
+	}
+
+	if validateGuildID(p, guildID) == false {
+		return
+	}
+
+	userID := p.Presence.User.ID
+	_, ok := StreamList[userID]
+	if ok == false {
+		StreamList[userID] = map[string]bool{"streaming": false}
+	}
+
+	if p.Game == nil {
+		StreamList[userID]["streaming"] = false
+		fmt.Println(StreamList[userID])
+		fmt.Println("No game")
+		return
+	}
+
+	if p.Game.Type == 1 {
+		if StreamList[userID]["streaming"] == true {
+			fmt.Println("already streaming")
+		} else {
+			StreamList[userID]["streaming"] = true
+			fmt.Println(StreamList[userID])
+			fmt.Println("Stream started")
 		}
 	}
-}
 
-func updateChannel(s *discordgo.Session, p *discordgo.PresenceUpdate) {
-
-	if p.Game.Name == "Twitch" {
-		streamChannel, exists := os.LookupEnv("STREAM_CHANNEL")
-		if !exists {
-			fmt.Println("Cannot find env variable STREAM_CHANNEL. Please ensure this is set to use streaming alerts.")
-			return
+	if p.Game.Type != 1 {
+		if StreamList[userID]["streaming"] == false {
+			fmt.Println("already not streaming")
+		} else {
+			StreamList[userID]["streaming"] = false
+			fmt.Println(StreamList[userID])
+			fmt.Println("Stream ended or not streaming")
 		}
+	}
 
+	if StreamList[userID]["streaming"] == true {
 		user := getUser(s, p.Presence.User.ID)
 		if p.Nick != "" {
 			user = p.Nick
 		}
-
 		messageBody := formatMessage(user, p.Game.State, p.Game.Details, p.Game.URL)
 		s.ChannelMessageSend(streamChannel, messageBody)
 	}
@@ -61,4 +87,12 @@ func formatMessage(user string, assets string, details string, url string) strin
 	message := "~STREAM TIME~!\n" + "**" + user + "**" + " ~went live with~ " + "**" + assets + "**" + "!\n" + details + "\n" + url
 
 	return message
+}
+
+func validateGuildID(p *discordgo.PresenceUpdate, g string) bool {
+
+	if p.GuildID != g {
+		return false
+	}
+	return true
 }
