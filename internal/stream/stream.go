@@ -1,4 +1,4 @@
-package main
+package stream
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 // StreamList map of maps containing all stream activity
 var StreamList = make(map[string]map[string]bool)
 
-func streamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
+func StreamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 
 	guildID, exists := os.LookupEnv("GUILD_ID")
 	if !exists {

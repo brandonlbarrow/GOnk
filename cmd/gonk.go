@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/brandonlbarrow/gonk/internal/stream"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 )
@@ -20,7 +22,7 @@ func init() {
 func main() {
 
 	discord := initialize()
-	discord.AddHandler(streamHandler)
+	discord.AddHandler(stream.StreamHandler)
 
 	err := discord.Open()
 	if err != nil {
