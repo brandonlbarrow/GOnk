@@ -10,6 +10,30 @@ import (
 // StreamList map of maps containing all stream activity
 var StreamList = make(map[string]map[string]bool)
 
+type StreamManager struct {
+	PresenceHandler func(*discordgo.Session, *discordgo.PresenceUpdate)
+	StreamStateMap map[string]bool
+}
+
+func (s *StreamManager) shiftStreamState(userID string, streamPresence int) {
+	switch s.StreamStateMap[userID] {
+	case true:
+		switch streamPresence {
+		case 1:
+			return
+		default:
+			s.StreamStateMap[userID] = false
+		}
+	case false:
+		switch streamPresence {
+		case 1:
+			s.StreamStateMap[userID] = true
+		default:
+			return
+		}
+	}
+}
+
 func StreamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 
 	guildID, exists := os.LookupEnv("GUILD_ID")
@@ -44,6 +68,7 @@ func StreamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 	if p.Game.Type == 1 {
 		if StreamList[userID]["streaming"] == true {
 			fmt.Println("already streaming")
+			return
 		} else {
 			StreamList[userID]["streaming"] = true
 			fmt.Println(StreamList[userID])
