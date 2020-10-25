@@ -23,7 +23,7 @@ func main() {
 	discord := initDiscordSession()
 	discord.AddHandler(stream.Handler)
 	// https://discord.com/developers/docs/topics/gateway#gateway-intents
-	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildPresences)
+	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessageTyping)
 
 	err := discord.Open()
 	if err != nil {
