@@ -12,7 +12,7 @@ var StreamList = make(map[string]map[string]bool)
 
 type StreamManager struct {
 	PresenceHandler func(*discordgo.Session, *discordgo.PresenceUpdate)
-	StreamStateMap map[string]bool
+	StreamStateMap  map[string]bool
 }
 
 func (s *StreamManager) shiftStreamState(userID string, streamPresence int) {
@@ -34,7 +34,14 @@ func (s *StreamManager) shiftStreamState(userID string, streamPresence int) {
 	}
 }
 
-func StreamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
+// Handler ....
+func Handler(s *discordgo.Session, m *discordgo.PresenceUpdate) {
+	fmt.Println("boop")
+
+	//streamHandler(s, p)
+}
+func streamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
+	fmt.Println("invoking stream handler")
 
 	guildID, exists := os.LookupEnv("GUILD_ID")
 	if !exists {

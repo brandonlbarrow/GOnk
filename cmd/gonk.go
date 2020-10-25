@@ -7,7 +7,6 @@ import (
 	"syscall"
 
 	"github.com/brandonlbarrow/gonk/internal/stream"
-
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 )
@@ -21,8 +20,10 @@ func init() {
 
 func main() {
 
-	discord := initialize()
-	discord.AddHandler(stream.StreamHandler)
+	discord := initDiscordSession()
+	discord.AddHandler(stream.Handler)
+	// https://discord.com/developers/docs/topics/gateway#gateway-intents
+	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildPresences)
 
 	err := discord.Open()
 	if err != nil {
@@ -37,7 +38,7 @@ func main() {
 
 }
 
-func initialize() *discordgo.Session {
+func initDiscordSession() *discordgo.Session {
 
 	token, exists := os.LookupEnv("TOKEN")
 	if !exists {
