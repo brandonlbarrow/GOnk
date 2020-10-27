@@ -8,6 +8,7 @@ import (
 
 	"github.com/brandonlbarrow/gonk/internal/stream"
 	"github.com/brandonlbarrow/gonk/internal/twitter"
+	"github.com/brandonlbarrow/gonk/internal/cantina"
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 )
@@ -24,6 +25,7 @@ func main() {
 	discord := initDiscordSession()
 	discord.AddHandler(stream.Handler)
 	discord.AddHandler(twitter.Handler)
+	discord.AddHandler(cantina.Handler)
 	// https://discord.com/developers/docs/topics/gateway#gateway-intents
 	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessages)
 
