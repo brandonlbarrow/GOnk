@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/brandonlbarrow/gonk/internal/stream"
+	"github.com/brandonlbarrow/gonk/internal/twitter"
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 )
