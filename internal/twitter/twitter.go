@@ -1,16 +1,17 @@
 package twitter
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
-	"strings"
 	"os"
-	"encoding/json"
-	"io/ioutil"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
-
 )
 
 const getRecentTweetsEndpoint = "https://api.twitter.com/2/tweets/search/recent"
@@ -34,9 +35,9 @@ type TweetResponse struct {
 
 // Tweet ...
 type Tweet struct {
-	Text string `json:"text,omitempty"`
+	Text      string `json:"text,omitempty"`
 	CreatedAt string `json:"created_at,omitempty"`
-	ID string `json:"id"`
+	ID        string `json:"id"`
 }
 
 // New ...
@@ -49,7 +50,8 @@ func New(bearerToken string, client *http.Client) *Client {
 
 // GetRecentTweets ...
 func (c *Client) GetRecentTweets(query *Query) (*TweetResponse, error) {
-	rawURL := fmt.Sprintf("%s?query=from:%s&twitter.fields=%s", getRecentTweetsEndpoint, query.From, query.TweetFields)
+	rawURL := fmt.Sprintf("%s?query=from:%s&tweet.fields=%s", getRecentTweetsEndpoint, query.From, query.TweetFields)
+	fmt.Println(rawURL)
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, err
@@ -85,18 +87,53 @@ func (c *Client) GetRecentTweets(query *Query) (*TweetResponse, error) {
 
 // Handler ...
 func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
+
+	// Ignore all messages created by the bot itself
+	if m.Author.ID == s.State.User.ID {
+		return
+	}
+
 	client := New(os.Getenv("TWITTER_BEARER_TOKEN"), &http.Client{})
 	if m.ChannelID == os.Getenv("TWEET_CHANNEL") && strings.Contains(m.Content, "dril") {
 		tweets, err := client.GetRecentTweets(&Query{
-			From: "@dril",
+			From:        "dril",
 			TweetFields: "created_at,entities",
 		})
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Fatalf("could not get tweets: %s", err.Error())
 		}
-		for _, tweet := range tweets.Data {
-			fmt.Println(tweet)
+		randomIndex := rand.Intn(len(tweets.Data))
+		tweet := tweets.Data[randomIndex]
+		tweetURL, err := testTweetURL(&tweet, "dril")
+		if err != nil {
+			log.Fatalf("failed to get tweet url %s", err.Error())
+		}
+
+		_, err = s.ChannelMessageSend(m.ChannelID, tweetURL.String())
+		if err != nil {
+			log.Fatalf("failed sending message to %s with content %s", m.ChannelID, tweetURL.String())
 		}
 	}
 
+}
+
+func testTweetURL(tweet *Tweet, user string) (*url.URL, error) {
+	rawURL := fmt.Sprintf("https://twitter.com/%s/status/%s", user, tweet.ID)
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse url %s", err.Error())
+	}
+	client := &http.Client{}
+	resp, err := client.Do(&http.Request{
+		Method: http.MethodGet,
+		URL:    parsedURL,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failure verifing existence of tweet id %s: %s", tweet.ID, err.Error())
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failure getting tweet with id of %s: %s", tweet.ID, err.Error())
+	}
+
+	return parsedURL, nil
 }
