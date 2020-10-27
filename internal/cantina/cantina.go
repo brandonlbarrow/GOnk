@@ -4,6 +4,9 @@ import (
 	"log"
 	"os"
 	"strings"
+	"fmt"
+	"time"
+	"strconv"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -16,8 +19,11 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	url := fmt.Sprintf("%s?seed=%s", os.Getenv("CANTINA_URL"), strconv.FormatInt((time.Now().UnixNano()), 16))
+	fmt.Println(url)
+
 	if strings.Contains(m.Content, os.Getenv("CANTINA_LISTEN_TEXT")) {
-			_, err := s.ChannelMessageSend(m.ChannelID, os.Getenv("CANTINA_URL"))
+			_, err := s.ChannelMessageSend(m.ChannelID, url)
 		if err != nil {
 			log.Fatalf("failed sending message to %s with content %s", m.ChannelID, os.Getenv("CANTINA_URL"))
 		}
