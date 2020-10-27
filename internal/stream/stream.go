@@ -36,7 +36,6 @@ func (s *StreamManager) shiftStreamState(userID string, streamPresence int) {
 
 // Handler ....
 func Handler(s *discordgo.Session, m *discordgo.PresenceUpdate) {
-
 	streamHandler(s, m)
 }
 func streamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {

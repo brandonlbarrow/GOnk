@@ -23,8 +23,9 @@ func main() {
 
 	discord := initDiscordSession()
 	discord.AddHandler(stream.Handler)
+	discord.AddHandler(twitter.Handler)
 	// https://discord.com/developers/docs/topics/gateway#gateway-intents
-	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessageTyping)
+	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessageCreate)
 
 	err := discord.Open()
 	if err != nil {
