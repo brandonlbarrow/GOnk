@@ -87,6 +87,7 @@ func (c *Client) GetRecentTweets(query *Query) (*TweetResponse, error) {
 
 // Handler ...
 func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	user := os.Getenv("TWEET_USER")
 
 	// Ignore all messages created by the bot itself
 	if m.Author.ID == s.State.User.ID {
@@ -94,9 +95,9 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	client := New(os.Getenv("TWITTER_BEARER_TOKEN"), &http.Client{})
-	if m.ChannelID == os.Getenv("TWEET_CHANNEL") && strings.Contains(m.Content, "dril") {
+	if m.ChannelID == os.Getenv("TWEET_CHANNEL") && strings.Contains(m.Content, user) {
 		tweets, err := client.GetRecentTweets(&Query{
-			From:        "dril",
+			From:        user,
 			TweetFields: "created_at,entities",
 		})
 		if err != nil {
@@ -104,7 +105,7 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		randomIndex := rand.Intn(len(tweets.Data))
 		tweet := tweets.Data[randomIndex]
-		tweetURL, err := testTweetURL(&tweet, "dril")
+		tweetURL, err := testTweetURL(&tweet, user)
 		if err != nil {
 			log.Fatalf("failed to get tweet url %s", err.Error())
 		}
