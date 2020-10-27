@@ -19,7 +19,7 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	url := fmt.Sprintf("%s?seed=%s", os.Getenv("CANTINA_URL"), strconv.FormatInt((time.Now().UnixNano()), 16))
+	url := fmt.Sprintf("%s?seed=%s", os.Getenv("CANTINA_URL"), strconv.FormatInt((time.Now().UnixNano()), 10))
 	fmt.Println(url)
 
 	if strings.Contains(m.Content, os.Getenv("CANTINA_LISTEN_TEXT")) {
