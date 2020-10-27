@@ -88,6 +88,7 @@ func (c *Client) GetRecentTweets(query *Query) (*TweetResponse, error) {
 // Handler ...
 func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	user := os.Getenv("TWEET_USER")
+	text := os.Getenv("TWEET_LISTEN_TEXT")
 
 	// Ignore all messages created by the bot itself
 	if m.Author.ID == s.State.User.ID {
@@ -95,7 +96,7 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	client := New(os.Getenv("TWITTER_BEARER_TOKEN"), &http.Client{})
-	if m.ChannelID == os.Getenv("TWEET_CHANNEL") && strings.Contains(m.Content, user) {
+	if m.ChannelID == os.Getenv("TWEET_CHANNEL") && strings.Contains(m.Content, text) {
 		tweets, err := client.GetRecentTweets(&Query{
 			From:        user,
 			TweetFields: "created_at,entities",
