@@ -106,7 +106,7 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		randomIndex := rand.Intn(len(tweets.Data))
 		tweet := tweets.Data[randomIndex]
-		tweetURL, err := testTweetURL(&tweet, user)
+		tweetURL, err := getTweetURL(&tweet, user)
 		if err != nil {
 			log.Fatalf("failed to get tweet url %s", err.Error())
 		}
@@ -116,25 +116,14 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 			log.Fatalf("failed sending message to %s with content %s", m.ChannelID, tweetURL.String())
 		}
 	}
-
 }
 
-func testTweetURL(tweet *Tweet, user string) (*url.URL, error) {
+func getTweetURL(tweet *Tweet, user string) (*url.URL, error) {
 	rawURL := fmt.Sprintf("https://twitter.com/%s/status/%s", user, tweet.ID)
+	fmt.Println(user)
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse url %s", err.Error())
-	}
-	client := &http.Client{}
-	resp, err := client.Do(&http.Request{
-		Method: http.MethodGet,
-		URL:    parsedURL,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failure verifing existence of tweet id %s: %s", tweet.ID, err.Error())
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failure getting tweet with id of %s: %s", tweet.ID, err.Error())
 	}
 
 	return parsedURL, nil
