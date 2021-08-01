@@ -15,7 +15,7 @@ WORKDIR /gonk
 COPY . /gonk
 
 ## Build binary
-RUN CGO_ENABLED=0 GOOS=linux go build -a -o gonk cmd/gonk.go
+RUN CGO_ENABLED=0 go build -a -o gonk cmd/gonk.go
 
 ################################
 ## Cert Stage ##
