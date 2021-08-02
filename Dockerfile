@@ -1,12 +1,5 @@
 ### Gonk Dockerfile ###
 
-
-## Global build args
-ARG DISCORD_TOKEN=""
-ARG STREAM_CHANNEL=""
-ARG GUILD_ID=""
-
-
 ################################
 ## Build Stage ##
 
@@ -35,12 +28,7 @@ COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certifica
 ## Use binary from previous stage - multi-stage builds are awesome
 COPY --from=builder /gonk/gonk /
 
-## Declare build args and pass them to ENV values
-ARG DISCORD_TOKEN
-ARG GUILD_ID
-ARG STREAM_CHANNEL
-
-ENV TOKEN=$DISCORD_TOKEN
+ENV TOKEN=$TOKEN
 ENV GUILD_ID=$GUILD_ID
 ENV STREAM_CHANNEL=$STREAM_CHANNEL
 
