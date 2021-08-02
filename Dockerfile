@@ -21,16 +21,16 @@ RUN apk --update add ca-certificates
 ################################
 ## Run Stage ##
 
-FROM scratch
+FROM scratch 
 ## We need the certs because Scratch doesn't have them
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 ## Use binary from previous stage - multi-stage builds are awesome
 COPY --from=builder /gonk/gonk /
 
-ENV TOKEN=$TOKEN
-ENV GUILD_ID=$GUILD_ID
-ENV STREAM_CHANNEL=$STREAM_CHANNEL
+ENV TOKEN $TOKEN
+ENV GUILD_ID $GUILD_ID
+ENV STREAM_CHANNEL $STREAM_CHANNEL
 
 ## Go Gonk Go!
 CMD ["/gonk"]
