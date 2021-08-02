@@ -28,5 +28,9 @@ jobs:
             DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}
             STREAM_CHANNEL=${{ secrets.STREAM_CHANNEL }}
             GUILD_ID=${{ secrets.GUILD_ID }}
+          build-args: |
+            DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}
+            STREAM_CHANNEL=${{ secrets.STREAM_CHANNEL }}
+            GUILD_ID=${{ secrets.GUILD_ID }}
 
     
