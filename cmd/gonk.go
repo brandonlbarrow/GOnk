@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/brandonlbarrow/gonk/internal/cocktail"
 	"os"
 	"os/signal"
 	"strings"
@@ -27,9 +28,10 @@ func main() {
 
 	discord := initDiscordSession()
 	discord.AddHandler(stream.Handler)
+	discord.AddHandler(cocktail.Handler)
 
 	// https://discord.com/developers/docs/topics/gateway#gateway-intents
-	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessages)
+	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessages | discordgo.IntentsGuildMessageReactions)
 
 	err := discord.Open()
 	if err != nil {
