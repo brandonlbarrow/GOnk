@@ -19,40 +19,38 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	ctdb := fetcher.New(os.Getenv("TCDB_API_KEY"), &http.Client{})
 	if strings.HasPrefix(m.Content, "!drank") {
+		if len(m.Content) > 100 { m.Content = m.Content[0:101] }
 		tokens := strings.Split(m.Content, " ")
 		if tokens[1] == "with" {
 			ingredients := tokens[2:len(tokens)]
 			drinks, err := ctdb.SearchByIngredients(ingredients)
 			if len(drinks) == 0 {
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("No drinks found with %s, <:kek:720702170563084288>", strings.Join(ingredients, " and ")))
+				return
 			}
 
 			if err != nil {
 				s.ChannelMessageSend(m.ChannelID, "🔥 Aww, you done broke it 🔥")
+				return
+			}
+			embed := getMultiDrinkEmbed(drinks, fmt.Sprintf("Drinks with %s", strings.Join(ingredients, " and ")))
+			_, err = s.ChannelMessageSendEmbed(m.ChannelID, embed)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		} else if tokens[1] == "search" {
+			search := tokens[2:len(tokens)]
+			drinks, err := ctdb.SearchByName(strings.Join(search, " "))
+			if len(drinks) == 0 {
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("No drinks found named %s, <:kek:720702170563084288>", strings.Join(search, " ")))
+				return
 			}
 
-			var fields []*discordgo.MessageEmbedField
-			var curField *discordgo.MessageEmbedField = nil
-			for i, d := range drinks {
-				if i > 30 { break }
-				if i % 5 == 0 {
-					curField = &discordgo.MessageEmbedField{
-						Name:   fmt.Sprintf("Dranks %d-%d", i + 1, i + 11),
-						Inline: true,
-					}
-					fields = append(fields, curField)
-				}
-				curField.Value += fmt.Sprintf("%s\n", d.Name)
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, "🔥 Aww, you done broke it 🔥")
+				return
 			}
-
-			embed := &discordgo.MessageEmbed{
-				Title:       fmt.Sprintf("Drinks with %s", strings.Join(ingredients, " and ")),
-				Description: "Type !drank <drink name> for details on a specific drink",
-				Timestamp:   time.Now().Format(time.RFC3339),
-				Color:       0x33ff33,
-				Fields:      fields,
-			}
-
+			embed := getMultiDrinkEmbed(drinks, fmt.Sprintf("Results for %s", strings.Join(search, " ")))
 			_, err = s.ChannelMessageSendEmbed(m.ChannelID, embed)
 			if err != nil {
 				log.Fatalln(err)
@@ -68,7 +66,11 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		} else {
 			search := tokens[1:len(tokens)]
 			drinks, _ := ctdb.SearchByName(strings.Join(search, " "))
-			s.ChannelMessageSendEmbed(m.ChannelID, getDrinkEmbed(drinks[0]))
+			if len(drinks) == 0 {
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("No drinks found named %s, <:kek:720702170563084288>", strings.Join(search, " ")))
+			} else {
+				s.ChannelMessageSendEmbed(m.ChannelID, getDrinkEmbed(drinks[0]))
+			}
 		}
 	}
 }
@@ -83,10 +85,10 @@ func getDrinkEmbed(drink cocktail.Drink) *discordgo.MessageEmbed {
 		Title:       drink.Name,
 		Timestamp:   time.Now().Format(time.RFC3339),
 		Color:       0x33ff33,
-		Thumbnail:   &discordgo.MessageEmbedThumbnail{
-			URL:      drink.Image + "/preview",
-			Width:    50,
-			Height:   50,
+		Image: &discordgo.MessageEmbedImage{
+			URL:      drink.Image,
+			Width:    100,
+			Height:   100,
 		},
 		Fields:      []*discordgo.MessageEmbedField{
 			{
@@ -99,5 +101,29 @@ func getDrinkEmbed(drink cocktail.Drink) *discordgo.MessageEmbed {
 				Inline: false,
 			},
 		},
+	}
+}
+
+func getMultiDrinkEmbed(drinks []cocktail.Drink, title string) *discordgo.MessageEmbed {
+	var fields []*discordgo.MessageEmbedField
+	var curField *discordgo.MessageEmbedField = nil
+	for i, d := range drinks {
+		if i > 30 { break }
+		if i % 5 == 0 {
+			curField = &discordgo.MessageEmbedField{
+				Name:   fmt.Sprintf("Dranks %d-%d", i + 1, i + 11),
+				Inline: true,
+			}
+			fields = append(fields, curField)
+		}
+		curField.Value += fmt.Sprintf("%s\n", d.Name)
+	}
+
+	return &discordgo.MessageEmbed{
+		Title:       title,
+		Description: "Type !drank <drink name> for details on a specific drink",
+		Timestamp:   time.Now().Format(time.RFC3339),
+		Color:       0x33ff33,
+		Fields:      fields,
 	}
 }
