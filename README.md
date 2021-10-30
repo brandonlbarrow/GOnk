@@ -26,7 +26,7 @@ gonk` to see the charts.
 
 To install the gonk chart:
 
-    helm install gonk bbarrow/gonk
+    helm install gonk gonk-repo/gonk
 
 To uninstall the chart:
 
