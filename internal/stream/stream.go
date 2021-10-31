@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/bwmarrin/discordgo"
+	log "github.com/sirupsen/logrus"
 )
 
 // StreamList map of maps containing all stream activity
@@ -14,6 +15,8 @@ type StreamManager struct {
 	PresenceHandler func(*discordgo.Session, *discordgo.PresenceUpdate)
 	StreamStateMap  map[string]bool
 }
+
+var logger log.Logger
 
 func (s *StreamManager) shiftStreamState(userID string, streamPresence int) {
 	switch s.StreamStateMap[userID] {
@@ -39,27 +42,28 @@ func Handler(s *discordgo.Session, m *discordgo.PresenceUpdate) {
 	streamHandler(s, m)
 }
 func streamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
-	fmt.Println("invoking stream handler")
+	logger.Infof("invoking stream handler.\n session: %s\n presenceUpdate: %s", s, p)
 
 	guildID, exists := os.LookupEnv("GUILD_ID")
 	if !exists {
-		fmt.Println("Cannot find env variable GUILD_ID. Please ensure this is set to use gonk.")
+		logger.Error("Cannot find env variable GUILD_ID. Please ensure this is set to use gonk.")
 		return
 	}
 
 	streamChannel, exists := os.LookupEnv("STREAM_CHANNEL")
 	if !exists {
-		fmt.Println("Cannot find env variable STREAM_CHANNEL. Please ensure this is set to use streaming alerts.")
+		logger.Error("Cannot find env variable STREAM_CHANNEL. Please ensure this is set to use streaming alerts.")
 		return
 	}
 
-	if validateGuildID(p, guildID) == false {
+	if !validateGuildID(p, guildID) {
+		logger.Errorf("cannot validate guild id: %s", guildID)
 		return
 	}
 
 	userID := p.Presence.User.ID
 	_, ok := StreamList[userID]
-	if ok == false {
+	if !ok {
 		StreamList[userID] = map[string]bool{"streaming": false}
 	}
 
@@ -71,7 +75,7 @@ func streamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 	}
 
 	if p.Game.Type == 1 {
-		if StreamList[userID]["streaming"] == true {
+		if StreamList[userID]["streaming"] {
 			fmt.Println("already streaming")
 			return
 		} else {

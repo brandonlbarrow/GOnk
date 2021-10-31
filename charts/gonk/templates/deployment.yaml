@@ -16,7 +16,7 @@ spec:
         spec:
             containers:
                 - name: {{ .Release.Name }}
-                  image: {{ .Values.image }}
+                  image: brandonlbarrow/gonk:latest
                   env:
                       - name: PATH
                         value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
