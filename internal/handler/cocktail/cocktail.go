@@ -2,14 +2,15 @@ package cocktail
 
 import (
 	"fmt"
-	"github.com/bwmarrin/discordgo"
-	"gitlab.com/cantinadev/thecocktaildbclient/cocktail"
-	"gitlab.com/cantinadev/thecocktaildbclient/fetcher"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/bwmarrin/discordgo"
+	"gitlab.com/cantinadev/thecocktaildbclient/cocktail"
+	"gitlab.com/cantinadev/thecocktaildbclient/fetcher"
 )
 
 func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -19,7 +20,9 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	ctdb := fetcher.New(os.Getenv("TCDB_API_KEY"), &http.Client{})
 	if strings.HasPrefix(m.Content, "!drank") {
-		if len(m.Content) > 100 { m.Content = m.Content[0:101] }
+		if len(m.Content) > 100 {
+			m.Content = m.Content[0:101]
+		}
 		tokens := strings.Split(m.Content, " ")
 		if tokens[1] == "with" {
 			ingredients := tokens[2:len(tokens)]
@@ -82,20 +85,20 @@ func getDrinkEmbed(drink cocktail.Drink) *discordgo.MessageEmbed {
 	}
 
 	return &discordgo.MessageEmbed{
-		Title:       drink.Name,
-		Timestamp:   time.Now().Format(time.RFC3339),
-		Color:       0x33ff33,
+		Title:     drink.Name,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Color:     0x33ff33,
 		Image: &discordgo.MessageEmbedImage{
-			URL:      drink.Image,
-			Width:    100,
-			Height:   100,
+			URL:    drink.Image,
+			Width:  100,
+			Height: 100,
 		},
-		Fields:      []*discordgo.MessageEmbedField{
+		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:   "Ingredients",
 				Value:  ingredients,
 				Inline: true,
-			},{
+			}, {
 				Name:   "Instructions",
 				Value:  drink.Instructions,
 				Inline: false,
@@ -108,10 +111,12 @@ func getMultiDrinkEmbed(drinks []cocktail.Drink, title string) *discordgo.Messag
 	var fields []*discordgo.MessageEmbedField
 	var curField *discordgo.MessageEmbedField = nil
 	for i, d := range drinks {
-		if i > 30 { break }
-		if i % 5 == 0 {
+		if i > 30 {
+			break
+		}
+		if i%5 == 0 {
 			curField = &discordgo.MessageEmbedField{
-				Name:   fmt.Sprintf("Dranks %d-%d", i + 1, i + 11),
+				Name:   fmt.Sprintf("Dranks %d-%d", i+1, i+11),
 				Inline: true,
 			}
 			fields = append(fields, curField)

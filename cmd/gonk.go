@@ -3,11 +3,14 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/brandonlbarrow/gonk/internal/cocktail"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/brandonlbarrow/gonk/internal/cocktail"
 
 	"github.com/brandonlbarrow/gonk/internal/stream"
 	"github.com/bwmarrin/discordgo"
@@ -23,6 +26,13 @@ func init() {
 	}
 	return
 }
+
+var (
+	handlerMap = map[string]Handler{
+		"stream":   stream.Handler,
+		"cocktail": cocktail.Handler,
+	}
+)
 
 func main() {
 

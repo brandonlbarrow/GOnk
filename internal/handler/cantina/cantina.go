@@ -1,12 +1,12 @@
 package cantina
 
 import (
+	"fmt"
 	"log"
 	"os"
-	"strings"
-	"fmt"
-	"time"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )

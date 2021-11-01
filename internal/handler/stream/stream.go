@@ -5,48 +5,40 @@ import (
 	"os"
 
 	"github.com/bwmarrin/discordgo"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
+
+type PresenceUpdateHandler interface {
+	Handle(s *discordgo.Session, p *discordgo.PresenceUpdate) error
+}
 
 // StreamList map of maps containing all stream activity
 var StreamList = make(map[string]map[string]bool)
 
-type StreamManager struct {
-	PresenceHandler func(*discordgo.Session, *discordgo.PresenceUpdate)
-	StreamStateMap  map[string]bool
+// Handler receives PresenceUpdate events from the Discord API and handles them
+type Handler struct {
+	logger    *logrus.Logger
+	channelID string
+	guildID   string
 }
 
-var logger log.Logger
+func (m *Handler) Handle(s *discordgo.Session, p *discordgo.PresenceUpdate) error {
 
-func (s *StreamManager) shiftStreamState(userID string, streamPresence int) {
-	switch s.StreamStateMap[userID] {
-	case true:
-		switch streamPresence {
-		case 1:
-			return
-		default:
-			s.StreamStateMap[userID] = false
-		}
-	case false:
-		switch streamPresence {
-		case 1:
-			s.StreamStateMap[userID] = true
-		default:
-			return
-		}
+	message := m.streamHandler(s, p)
+	msg, err := s.ChannelMessageSend(m.channelID, message)
+	if err != nil {
+		m.logger.Debugf("error sending message.\nPresence: %v\nError: %w\nChannelID: %s\nGuildID: %s", p, err, m.channelID, m.guildID)
+		return fmt.Errorf("error sending message: %w", err)
 	}
+	m.logger.Debugf("message successfully sent.\nMessage: %v\nChannelID: %s\nGuildID: %s", msg, m.channelID, m.guildID)
+	return nil
 }
-
-// Handler ....
-func Handler(s *discordgo.Session, m *discordgo.PresenceUpdate) {
-	streamHandler(s, m)
-}
-func streamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
-	logger.Infof("invoking stream handler.\n session: %s\n presenceUpdate: %s", s, p)
+func (m *Handler) streamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
+	m.logger.Infof("invoking stream handler.\n session: %s\n presenceUpdate: %s", s, p)
 
 	guildID, exists := os.LookupEnv("GUILD_ID")
 	if !exists {
-		logger.Error("Cannot find env variable GUILD_ID. Please ensure this is set to use gonk.")
+		m.logger.Error("Cannot find env variable GUILD_ID. Please ensure this is set to use gonk.")
 		return
 	}
 
