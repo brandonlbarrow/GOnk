@@ -8,30 +8,33 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type PresenceUpdateHandler interface {
-	Handle(s *discordgo.Session, p *discordgo.PresenceUpdate) error
-}
-
 // StreamList map of maps containing all stream activity
 var StreamList = make(map[string]map[string]bool)
 
 // Handler receives PresenceUpdate events from the Discord API and handles them
 type Handler struct {
-	logger    *logrus.Logger
+	logger *logrus.Logger
+	// channelID is the channel that stream events will be sent to.
 	channelID string
 	guildID   string
 }
 
-func (m *Handler) Handle(s *discordgo.Session, p *discordgo.PresenceUpdate) error {
+// NewHandler creates an instance of *Handler.
+func NewHandler(channelID, guildID string, logger *logrus.Logger) *Handler {
+	return &Handler{logger: logger, channelID: channelID, guildID: guildID}
+}
 
-	message := m.streamHandler(s, p)
+func (m *Handler) Handle(s *discordgo.Session, p *discordgo.PresenceUpdate) {
+
+	m.streamHandler(s, p)
+	message := ""
 	msg, err := s.ChannelMessageSend(m.channelID, message)
 	if err != nil {
 		m.logger.Debugf("error sending message.\nPresence: %v\nError: %w\nChannelID: %s\nGuildID: %s", p, err, m.channelID, m.guildID)
-		return fmt.Errorf("error sending message: %w", err)
+		return
 	}
 	m.logger.Debugf("message successfully sent.\nMessage: %v\nChannelID: %s\nGuildID: %s", msg, m.channelID, m.guildID)
-	return nil
+	return
 }
 func (m *Handler) streamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 	m.logger.Infof("invoking stream handler.\n session: %s\n presenceUpdate: %s", s, p)
@@ -44,12 +47,12 @@ func (m *Handler) streamHandler(s *discordgo.Session, p *discordgo.PresenceUpdat
 
 	streamChannel, exists := os.LookupEnv("STREAM_CHANNEL")
 	if !exists {
-		logger.Error("Cannot find env variable STREAM_CHANNEL. Please ensure this is set to use streaming alerts.")
+		logrus.Error("Cannot find env variable STREAM_CHANNEL. Please ensure this is set to use streaming alerts.")
 		return
 	}
 
 	if !validateGuildID(p, guildID) {
-		logger.Errorf("cannot validate guild id: %s", guildID)
+		logrus.Errorf("cannot validate guild id: %s", guildID)
 		return
 	}
 

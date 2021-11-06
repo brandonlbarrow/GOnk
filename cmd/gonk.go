@@ -1,62 +1,32 @@
 package main
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
+	"github.com/brandonlbarrow/gonk/internal/discord"
+	"github.com/brandonlbarrow/gonk/internal/handler/cocktail"
 	"github.com/sirupsen/logrus"
 
-	"github.com/brandonlbarrow/gonk/internal/cocktail"
-
-	"github.com/brandonlbarrow/gonk/internal/stream"
-	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
+	"github.com/brandonlbarrow/gonk/internal/handler/stream"
 )
 
-func init() {
-	switch os.Getenv("ENVIRONMENT") {
-	case strings.ToLower("local"):
-		if err := godotenv.Load(); err != nil {
-			panic(errors.New("No .env file found"))
-		}
-	}
-	return
-}
-
 var (
-	handlerMap = map[string]Handler{
-		"stream":   stream.Handler,
+	streamHandler = &stream.Handler{}
+	handlerMap    = map[string]interface{}{
+		"stream":   streamHandler.Handle,
 		"cocktail": cocktail.Handler,
 	}
+
+	discordgoLogLevel = os.Getenv("DISCORDGO_LOG_LEVEL") // the log level of the Discordgo session client. See https://pkg.go.dev/github.com/bwmarrin/discordgo#pkg-constants for options. Defaults to LogError
+	guildID           = os.Getenv("GUILD_ID")            // the Discord server ID to use for this installation of Gonk.
+	token             = os.Getenv("DISCORD_BOT_TOKEN")   // the bot token for use with the Discord API.
 )
 
 func main() {
-
-	discord := initDiscordSession()
-	discord.AddHandler(stream.Handler)
-	discord.AddHandler(cocktail.Handler)
-
-	// https://discord.com/developers/docs/topics/gateway#gateway-intents
-	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessages | discordgo.IntentsGuildMessageReactions)
-
-	err := discord.Open()
-	if err != nil {
-		fmt.Println("Error opening discord session: ", err)
-		return
-	}
-
-	fmt.Println("GOnk bot is now running.  Press CTRL-C to exit.")
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
-	<-sc
-
-}
-
-func initDiscordSession() *discordgo.Session {
 
 	token, exists := os.LookupEnv("TOKEN")
 	if !exists {
@@ -64,13 +34,31 @@ func initDiscordSession() *discordgo.Session {
 		os.Exit(1)
 	}
 
-	session, err := discordgo.New("Bot " + token)
-	if err != nil {
-		fmt.Println("Error initializing", err)
-		return session
+	// TODO remove
+	guildID := "308755439145713680"
+
+	mgr := discord.NewManager(
+		discord.WithGuildID(guildID),
+		discord.MustWithSession(token, discord.NewSessionArgsWithDefaults()),
+	)
+
+	for name, handler := range handlerMap {
+		logrus.Infof("adding handler %s", name)
+		mgr.AddHandler(handler)
 	}
 
-	session.StateEnabled = true
+	if err := mgr.Run(context.Background()); err != nil {
+		fmt.Errorf("error %w", err)
+		return
+	}
 
-	return session
+	fmt.Println("GOnk bot is now running.  Press CTRL-C to exit.")
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+	<-sc
+
+}
+
+func run() error {
+
 }
