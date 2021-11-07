@@ -16,15 +16,22 @@ import (
 )
 
 var (
-	gonkLogLevel      = os.Getenv("GONK_LOG_LEVEL")
-	discordgoLogLevel = os.Getenv("DISCORDGO_LOG_LEVEL") // the log level of the Discordgo session client. See https://pkg.go.dev/github.com/bwmarrin/discordgo#pkg-constants for options. Defaults to LogError
-	guildID           = os.Getenv("GUILD_ID")            // the Discord server ID to use for this installation of Gonk.
-	token             = os.Getenv("DISCORD_BOT_TOKEN")   // the bot token for use with the Discord API.
+	gonkLogLevel      = os.Getenv("GONK_LOG_LEVEL")            // the log level of the main Gonk process. Defaults to Info
+	discordgoLogLevel = os.Getenv("DISCORDGO_LOG_LEVEL")       // the log level of the Discordgo session client. See https://pkg.go.dev/github.com/bwmarrin/discordgo#pkg-constants for options. Defaults to LogError
+	guildID           = os.Getenv("DISCORD_GUILD_ID")          // the Discord server ID to use for this installation of Gonk.
+	channelID         = os.Getenv("DISCORD_STREAM_CHANNEL_ID") // the Discord channel ID to send events for the stream handler to
+	token             = os.Getenv("DISCORD_BOT_TOKEN")         // the bot token for use with the Discord API.
+	userID            = os.Getenv("DISCORD_USER_ID")           // the Discord user ID to match events on for sending streaming notifications.
 
 	log = newLogger(gonkLogLevel)
 
-	streamHandler = stream.NewHandler("", guildID, log)
-	handlerMap    = map[string]interface{}{
+	streamHandler = stream.NewHandler(
+		stream.WithChannelID(channelID),
+		stream.WithGuildID(guildID),
+		stream.WithLogger(log),
+		stream.WithUserID(userID),
+	)
+	handlerMap = map[string]interface{}{
 		"stream":   streamHandler.Handle,
 		"cocktail": cocktail.Handler,
 	}
@@ -43,10 +50,10 @@ func main() {
 					discord.DiscordLogLevelFromString(discordgoLogLevel)))),
 	)
 
-	log.Debug("manager created", mgr)
+	log.Debugf("manager created: %v", mgr)
 
 	for name, handler := range handlerMap {
-		logrus.Infof("adding handler %s", name)
+		log.Infof("adding handler %s", name)
 		mgr.AddHandler(handler)
 	}
 
@@ -63,7 +70,9 @@ func main() {
 
 func run(mgr *discord.Manager, done chan error) error {
 
-	if err := mgr.Run(context.Background()); err != nil {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := mgr.Run(ctx); err != nil {
 		done <- fmt.Errorf("error running manager discordgo session, %w", err)
 	}
 	return nil
