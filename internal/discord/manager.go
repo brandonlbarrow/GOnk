@@ -3,9 +3,13 @@ package discord
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+// DiscordgoLogLevel is a wrapper type for the discordgo LogLevel constants.
+type DiscordgoLogLevel int
 
 // Manager manages the discord session for a server (guild).
 type Manager struct {
@@ -35,21 +39,34 @@ func WithGuildID(guildID string) ManagerOption {
 type SessionArgs struct {
 	StateEnabled bool
 	LogLevel     int
-	Intents      *discordgo.Intent
+	Intents      *discordgo.Intent // https://discord.com/developers/docs/topics/gateway#gateway-intents
+
 }
 
-// Returns a new SessionArgs object using defaults.
-// https://discord.com/developers/docs/topics/gateway#gateway-intents
-func NewSessionArgsWithDefaults() SessionArgs {
-	return SessionArgs{
+type SessionArg func(s *SessionArgs)
+
+// Returns a new SessionArgs object using defaults. A slice of SessionArg can be supplied to override the defaults.
+func NewSessionArgs(args ...SessionArg) *SessionArgs {
+	s := &SessionArgs{
 		LogLevel:     discordgo.LogError,
 		StateEnabled: true,
 		Intents:      discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessages | discordgo.IntentsGuildMessageReactions),
 	}
+	for _, arg := range args {
+		arg(s)
+	}
+	return s
+}
+
+// WithLogLevel sets the DiscordgoLogLevel for the *SessionArgs.
+func WithLogLevel(logLevel DiscordgoLogLevel) SessionArg {
+	return func(s *SessionArgs) {
+		s.LogLevel = int(logLevel)
+	}
 }
 
 // MustWithSession takes a token string and returns a fully initialized Discord *Session object. If the session cannot be established, this function will panic with the associated error.
-func MustWithSession(token string, args SessionArgs) ManagerOption {
+func MustWithSession(token string, args *SessionArgs) ManagerOption {
 	return func(m *Manager) {
 		session, err := discordgo.New("Bot " + token)
 		if err != nil {
@@ -74,4 +91,26 @@ func (m *Manager) Run(ctx context.Context) error {
 		return fmt.Errorf("error opening discord session: %w", err)
 	}
 	return nil
+}
+
+// DiscordLogLevelFromString takes a string representation of a logging level and returns the appropriate DiscordgoLogLevel.
+func DiscordLogLevelFromString(level string) DiscordgoLogLevel {
+	var (
+		LevelDebug   DiscordgoLogLevel = DiscordgoLogLevel(discordgo.LogDebug)
+		LevelInfo    DiscordgoLogLevel = DiscordgoLogLevel(discordgo.LogInformational)
+		LevelError   DiscordgoLogLevel = DiscordgoLogLevel(discordgo.LogError)
+		LevelWarning DiscordgoLogLevel = DiscordgoLogLevel(discordgo.LogWarning)
+	)
+	switch strings.ToLower(level) {
+	case "debug":
+		return LevelDebug
+	case "info":
+		return LevelInfo
+	case "error":
+		return LevelError
+	case "warning":
+		return LevelWarning
+	default:
+		return LevelError
+	}
 }

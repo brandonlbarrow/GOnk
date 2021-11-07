@@ -9,3 +9,5 @@ type PresenceUpdateHandler interface {
 type MessageCreateHandler interface {
 	Handle(s *discordgo.Session, m *discordgo.MessageCreate) error
 }
+
+type HandlerMap map[string]interface{}

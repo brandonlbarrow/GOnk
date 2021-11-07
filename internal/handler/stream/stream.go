@@ -11,33 +11,33 @@ import (
 // StreamList map of maps containing all stream activity
 var StreamList = make(map[string]map[string]bool)
 
-// Handler receives PresenceUpdate events from the Discord API and handles them
+// Handler receives PresenceUpdate events from the Discord API and handles them.
 type Handler struct {
-	logger *logrus.Logger
-	// channelID is the channel that stream events will be sent to.
+	logger  *logrus.Logger
+	guildID string
+	targets []StreamTarget
+}
+
+// StreamTarget represents a configuration that matches a target Discord channel and condition by which the stream notification is sent.
+type StreamTarget struct {
 	channelID string
 	guildID   string
+	userID    string
 }
 
 // NewHandler creates an instance of *Handler.
 func NewHandler(channelID, guildID string, logger *logrus.Logger) *Handler {
-	return &Handler{logger: logger, channelID: channelID, guildID: guildID}
+	return &Handler{logger: logger, guildID: guildID}
 }
 
 func (m *Handler) Handle(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 
+	m.logger.WithFields(presenceUpdateFields(p)).Debug("invoking stream handler")
 	m.streamHandler(s, p)
-	message := ""
-	msg, err := s.ChannelMessageSend(m.channelID, message)
-	if err != nil {
-		m.logger.Debugf("error sending message.\nPresence: %v\nError: %w\nChannelID: %s\nGuildID: %s", p, err, m.channelID, m.guildID)
-		return
-	}
-	m.logger.Debugf("message successfully sent.\nMessage: %v\nChannelID: %s\nGuildID: %s", msg, m.channelID, m.guildID)
 	return
 }
+
 func (m *Handler) streamHandler(s *discordgo.Session, p *discordgo.PresenceUpdate) {
-	m.logger.Infof("invoking stream handler.\n session: %s\n presenceUpdate: %s", s, p)
 
 	guildID, exists := os.LookupEnv("GUILD_ID")
 	if !exists {
@@ -124,4 +124,36 @@ func validateGuildID(p *discordgo.PresenceUpdate, g string) bool {
 		return false
 	}
 	return true
+}
+
+func presenceUpdateFields(p *discordgo.PresenceUpdate) logrus.Fields {
+	if p == nil {
+		return logrus.Fields{}
+	}
+	baseFields := logrus.Fields{
+		"nickname": p.Nick,
+		"guildID":  p.GuildID,
+		"status":   p.Status,
+	}
+	if p.User != nil {
+		userFields := logrus.Fields{
+			"username": p.User.Username,
+			"id":       p.User.ID,
+		}
+		for k, v := range userFields {
+			baseFields[k] = v
+		}
+	}
+	if p.Game != nil {
+		gameFields := logrus.Fields{
+			"name":    p.Game.Name,
+			"type":    p.Game.Type,
+			"url":     p.Game.URL,
+			"details": p.Game.Details,
+		}
+		for k, v := range gameFields {
+			baseFields[k] = v
+		}
+	}
+	return baseFields
 }
