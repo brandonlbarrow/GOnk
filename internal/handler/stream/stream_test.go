@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/go-test/deep"
 	"github.com/sirupsen/logrus"
 )
 
@@ -60,6 +61,11 @@ func TestHandler_streamHandler(t *testing.T) {
 					GuildID: "foo",
 				},
 			},
+			want: map[string]streamerStatus{
+				"foo": {
+					statusStreamingKey: true,
+				},
+			},
 		},
 		{
 			name: "success, user is streaming but ends stream, change state",
@@ -98,13 +104,21 @@ func TestHandler_streamHandler(t *testing.T) {
 					GuildID: "foo",
 				},
 			},
+			want: map[string]streamerStatus{
+				"foo": {
+					statusStreamingKey: false,
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Error(tt.m.streamerMap.getStreamList())
 			tt.m.streamHandler(tt.args.s, tt.args.p)
-			t.Error(tt.m.streamerMap.getStreamList())
+			diff := deep.Equal(tt.m.streamerMap.getStreamList(), tt.want)
+			if len(diff) > 0 {
+				t.Errorf("got diff %v", diff)
+				return
+			}
 		})
 	}
 }
