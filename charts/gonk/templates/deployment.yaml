@@ -35,6 +35,8 @@ spec:
                         value: {{ .Values.discord.discordgoLogLevel }}
                       - name: GONK_LOG_LEVEL
                         value: {{ .Values.discord.logLevel }}
+                      - name: VERSION
+                        value: {{ .Chart.AppVersion }}
                       - name: TCDB_API_KEY
                         valueFrom:
                             secretKeyRef:
