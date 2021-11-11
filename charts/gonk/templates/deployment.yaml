@@ -20,21 +20,17 @@ spec:
                   env:
                       - name: PATH
                         value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-                      - name: STREAM_CHANNEL
-                        valueFrom:
-                            secretKeyRef:
-                                name: gonk
-                                key: STREAM_CHANNEL
-                      - name: TOKEN
+                      - name: DISCORD_STREAM_CHANNEL_ID
+                        value: {{ .Values.discord.streamChannelID }}
+                      - name: DISCORD_BOT_TOKEN
                         valueFrom:
                             secretKeyRef:
                                 name: gonk
                                 key: TOKEN
-                      - name: GUILD_ID
-                        valueFrom:
-                            secretKeyRef:
-                                name: gonk
-                                key: GUILD_ID
+                      - name: DISCORD_GUILD_ID
+                        value: {{ .Values.discord.guildID }}
+                      - name: DISCORD_USER_ID
+                        value: {{ .Values.discord.userID }}
                       - name: TCDB_API_KEY
                         valueFrom:
                             secretKeyRef:
