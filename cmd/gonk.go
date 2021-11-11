@@ -8,6 +8,7 @@ import (
 
 	"github.com/brandonlbarrow/gonk/internal/discord"
 	"github.com/brandonlbarrow/gonk/internal/handler/cocktail"
+	"github.com/brandonlbarrow/gonk/internal/handler/info"
 	"github.com/sirupsen/logrus"
 
 	"github.com/brandonlbarrow/gonk/internal/handler/stream"
@@ -22,6 +23,7 @@ var (
 	channelID         = os.Getenv("DISCORD_STREAM_CHANNEL_ID") // the Discord channel ID to send events for the stream handler to
 	token             = os.Getenv("DISCORD_BOT_TOKEN")         // the bot token for use with the Discord API.
 	userID            = os.Getenv("DISCORD_USER_ID")           // the Discord user ID to match events on for sending streaming notifications.
+	tcdbAPIKey        = os.Getenv("TCDB_API_KEY")              // The Cocktail DB API key for !drank command functionality
 
 	log = newLogger(gonkLogLevel)
 
@@ -31,9 +33,15 @@ var (
 		stream.WithLogger(log),
 		stream.WithUserID(userID),
 	)
+	infoHandler     = info.NewHandler()
+	cocktailHandler = cocktail.NewHandler(
+		cocktail.WithGuildID(guildID),
+		cocktail.WithTCDBAPIKey(tcdbAPIKey),
+	)
 	handlerMap = map[string]interface{}{
 		"stream":   streamHandler.Handle,
-		"cocktail": cocktail.Handler,
+		"cocktail": cocktailHandler.Handle,
+		"info":     infoHandler.Handle,
 	}
 )
 

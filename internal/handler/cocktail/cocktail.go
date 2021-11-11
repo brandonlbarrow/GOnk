@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -13,19 +12,54 @@ import (
 	"gitlab.com/cantinadev/thecocktaildbclient/fetcher"
 )
 
-func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
+type Handler struct {
+	guildID    string
+	tcdbAPIKey string
+}
+
+func NewHandler(opts ...HandlerOption) *Handler {
+	h := &Handler{}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
+}
+
+type HandlerOption func(h *Handler)
+
+func WithTCDBAPIKey(apiKey string) HandlerOption {
+	return func(h *Handler) {
+		h.tcdbAPIKey = apiKey
+	}
+}
+
+func WithGuildID(guildID string) HandlerOption {
+	return func(h *Handler) {
+		h.guildID = guildID
+	}
+}
+
+func (h *Handler) Handle(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
 
-	ctdb := fetcher.New(os.Getenv("TCDB_API_KEY"), &http.Client{})
+	if m.GuildID != h.guildID {
+		return
+	}
+
+	ctdb := fetcher.New(h.tcdbAPIKey, &http.Client{})
 	if strings.HasPrefix(m.Content, "!drank") {
 		if len(m.Content) > 100 {
 			m.Content = m.Content[0:101]
 		}
 		tokens := strings.Split(m.Content, " ")
+		if len(tokens) == 1 {
+			s.ChannelMessageSend(m.ChannelID, "type `!drank random` or `!drank with $INGREDIENT`")
+			return
+		}
 		if tokens[1] == "with" {
-			ingredients := tokens[2:len(tokens)]
+			ingredients := tokens[2:]
 			drinks, err := ctdb.SearchByIngredients(ingredients)
 			if len(drinks) == 0 {
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("No drinks found with %s, <:kek:720702170563084288>", strings.Join(ingredients, " and ")))
@@ -42,7 +76,7 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 				log.Fatalln(err)
 			}
 		} else if tokens[1] == "search" {
-			search := tokens[2:len(tokens)]
+			search := tokens[2:]
 			drinks, err := ctdb.SearchByName(strings.Join(search, " "))
 			if len(drinks) == 0 {
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("No drinks found named %s, <:kek:720702170563084288>", strings.Join(search, " ")))
@@ -67,7 +101,7 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 			s.ChannelMessageSendEmbed(m.ChannelID, getDrinkEmbed(drink))
 		} else {
-			search := tokens[1:len(tokens)]
+			search := tokens[1:]
 			drinks, _ := ctdb.SearchByName(strings.Join(search, " "))
 			if len(drinks) == 0 {
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("No drinks found named %s, <:kek:720702170563084288>", strings.Join(search, " ")))

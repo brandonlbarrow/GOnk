@@ -132,6 +132,7 @@ func (m *Handler) streamHandler(s Sessioner, p *discordgo.PresenceUpdate) {
 		return
 	}
 
+	// validation for single user mode
 	if !validateUserID(p, m.userID) {
 		m.logger.WithFields(logrus.Fields{"providedUserID": m.userID, "eventUser": p.User}).Debug("user ID does not match PresenceUpdate, skipping")
 		return
