@@ -132,6 +132,11 @@ func (m *Handler) streamHandler(s Sessioner, p *discordgo.PresenceUpdate) {
 		return
 	}
 
+	if !validateUserID(p, m.userID) {
+		m.logger.WithFields(logrus.Fields{"providedUserID": m.userID, "eventUser": p.User}).Debug("user ID does not match PresenceUpdate, skipping")
+		return
+	}
+
 	// get the userID and initialize their streaming state as false if they don't already exist in the map of streamerIDs to streamerStatus
 	userID := p.Presence.User.ID
 	_, ok := m.streamerMap.streamList[userID]
@@ -199,6 +204,16 @@ func formatMessage(user string, assets string, details string, url string) strin
 
 func validateGuildID(p *discordgo.PresenceUpdate, g string) bool {
 	return p.GuildID == g
+}
+
+func validateUserID(p *discordgo.PresenceUpdate, u string) bool {
+	if u == "" {
+		return true
+	}
+	if p.User != nil {
+		return p.User.ID == u
+	}
+	return false
 }
 
 func presenceUpdateFields(p *discordgo.PresenceUpdate) logrus.Fields {

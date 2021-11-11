@@ -63,7 +63,7 @@ func main() {
 	log.Info("GOnk is now running.")
 	err := <-done
 	if err != nil {
-		log.Errorf("GOnk encountered an error while running: %w", err)
+		log.Errorf("GOnk encountered an error while running: %v", err)
 		os.Exit(1)
 	}
 }

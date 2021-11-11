@@ -18,6 +18,8 @@ var (
 	}
 )
 
+var streamerState = newStreamerMap()
+
 func TestHandler_streamHandler(t *testing.T) {
 	type args struct {
 		s Sessioner
@@ -35,7 +37,7 @@ func TestHandler_streamHandler(t *testing.T) {
 				logger:      log(),
 				guildID:     "foo",
 				channelID:   "bar",
-				streamerMap: newStreamerMap(),
+				streamerMap: streamerState,
 			},
 			args: args{
 				s: &mockSessioner{
@@ -106,6 +108,282 @@ func TestHandler_streamHandler(t *testing.T) {
 			},
 			want: map[string]streamerStatus{
 				"foo": {
+					statusStreamingKey: false,
+				},
+			},
+		},
+		{
+			name: "success, user is streaming, but got new event, still streaming",
+			m: &Handler{
+				logger:      log(),
+				guildID:     "foo",
+				channelID:   "bar",
+				streamerMap: streamerState,
+			},
+			args: args{
+				s: &mockSessioner{
+					respGetUser: &discordgo.User{
+						ID:       "foo",
+						Username: "bar",
+					},
+					respSendMessage: &discordgo.Message{},
+				},
+				p: &discordgo.PresenceUpdate{
+					Presence: discordgo.Presence{
+						User: &discordgo.User{
+							ID:       "foo",
+							Username: "bar",
+						},
+						Game: &discordgo.Game{
+							Name:    "Mystical Ninja Starring Goemon",
+							URL:     "https://twitch.tv/",
+							Details: "ganbare",
+							Type:    discordgo.GameTypeStreaming,
+						},
+					},
+					GuildID: "foo",
+				},
+			},
+			want: map[string]streamerStatus{
+				"foo": {
+					statusStreamingKey: true,
+				},
+			},
+		},
+		{
+			name: "success, another user is streaming, change state",
+			m: &Handler{
+				logger:      log(),
+				guildID:     "foo",
+				channelID:   "bar",
+				streamerMap: streamerState,
+			},
+			args: args{
+				s: &mockSessioner{
+					respGetUser: &discordgo.User{
+						ID:       "baz",
+						Username: "bar",
+					},
+					respSendMessage: &discordgo.Message{},
+				},
+				p: &discordgo.PresenceUpdate{
+					Presence: discordgo.Presence{
+						User: &discordgo.User{
+							ID:       "baz",
+							Username: "bar",
+						},
+						Game: &discordgo.Game{
+							Name:    "Super Metroid",
+							URL:     "https://twitch.tv/",
+							Details: "Saving the frames",
+							Type:    discordgo.GameTypeStreaming,
+						},
+					},
+					GuildID: "foo",
+				},
+			},
+			want: map[string]streamerStatus{
+				"foo": {
+					statusStreamingKey: true,
+				},
+				"baz": {
+					statusStreamingKey: true,
+				},
+			},
+		},
+		{
+			name: "success, foo stopped streaming but baz continues, change state for foo",
+			m: &Handler{
+				logger:      log(),
+				guildID:     "foo",
+				channelID:   "bar",
+				streamerMap: streamerState,
+			},
+			args: args{
+				s: &mockSessioner{
+					respGetUser: &discordgo.User{
+						ID:       "foo",
+						Username: "bar",
+					},
+					respSendMessage: &discordgo.Message{},
+				},
+				p: &discordgo.PresenceUpdate{
+					Presence: discordgo.Presence{
+						User: &discordgo.User{
+							ID:       "foo",
+							Username: "bar",
+						},
+						Game: &discordgo.Game{
+							Name:    "Mystical Ninja Starring Goemon",
+							URL:     "https://twitch.tv/",
+							Details: "ganbare",
+							Type:    discordgo.GameTypeGame,
+						},
+					},
+					GuildID: "foo",
+				},
+			},
+			want: map[string]streamerStatus{
+				"foo": {
+					statusStreamingKey: false,
+				},
+				"baz": {
+					statusStreamingKey: true,
+				},
+			},
+		},
+		{
+			name: "success, baz continues streaming, foo stops playing a game",
+			m: &Handler{
+				logger:      log(),
+				guildID:     "foo",
+				channelID:   "bar",
+				streamerMap: streamerState,
+			},
+			args: args{
+				s: &mockSessioner{
+					respGetUser: &discordgo.User{
+						ID:       "foo",
+						Username: "bar",
+					},
+					respSendMessage: &discordgo.Message{},
+				},
+				p: &discordgo.PresenceUpdate{
+					Presence: discordgo.Presence{
+						User: &discordgo.User{
+							ID:       "foo",
+							Username: "bar",
+						},
+					},
+					GuildID: "foo",
+				},
+			},
+			want: map[string]streamerStatus{
+				"foo": {
+					statusStreamingKey: false,
+				},
+				"baz": {
+					statusStreamingKey: true,
+				},
+			},
+		},
+		{
+			name: "success, baz loses power",
+			m: &Handler{
+				logger:      log(),
+				guildID:     "foo",
+				channelID:   "bar",
+				streamerMap: streamerState,
+			},
+			args: args{
+				s: &mockSessioner{
+					respGetUser: &discordgo.User{
+						ID:       "baz",
+						Username: "bar",
+					},
+					respSendMessage: &discordgo.Message{},
+				},
+				p: &discordgo.PresenceUpdate{
+					Presence: discordgo.Presence{
+						User: &discordgo.User{
+							ID:       "baz",
+							Username: "bar",
+						},
+					},
+					GuildID: "foo",
+				},
+			},
+			want: map[string]streamerStatus{
+				"foo": {
+					statusStreamingKey: false,
+				},
+				"baz": {
+					statusStreamingKey: false,
+				},
+			},
+		},
+		{
+			name: "success single user mode, foo is the streamer",
+			m: &Handler{
+				logger:      log(),
+				guildID:     "foo",
+				channelID:   "bar",
+				userID:      "foo",
+				streamerMap: streamerState,
+			},
+			args: args{
+				s: &mockSessioner{
+					respGetUser: &discordgo.User{
+						ID:       "foo",
+						Username: "bar",
+					},
+					respSendMessage: &discordgo.Message{},
+				},
+				p: &discordgo.PresenceUpdate{
+					Presence: discordgo.Presence{
+						User: &discordgo.User{
+							ID:       "foo",
+							Username: "bar",
+						},
+						Game: &discordgo.Game{
+							Name:    "Mystical Ninja Starring Goemon",
+							URL:     "https://twitch.tv/",
+							Details: "ganbare",
+							Type:    discordgo.GameTypeStreaming,
+						},
+					},
+
+					GuildID: "foo",
+				},
+			},
+			want: map[string]streamerStatus{
+				"foo": {
+					statusStreamingKey: true,
+				},
+				"baz": {
+					statusStreamingKey: false,
+				},
+			},
+		},
+		{
+			name: "success single user mode, foo is the streamer, baz starts streaming, do not want update",
+			m: &Handler{
+				logger:      log(),
+				guildID:     "foo",
+				channelID:   "bar",
+				userID:      "foo",
+				streamerMap: streamerState,
+			},
+			args: args{
+				s: &mockSessioner{
+					respGetUser: &discordgo.User{
+						ID:       "baz",
+						Username: "bar",
+					},
+					respSendMessage: &discordgo.Message{},
+				},
+				p: &discordgo.PresenceUpdate{
+					Presence: discordgo.Presence{
+						User: &discordgo.User{
+							ID:       "baz",
+							Username: "bar",
+						},
+						Game: &discordgo.Game{
+							Name:    "Super Metroid",
+							URL:     "https://twitch.tv/",
+							Details: "Saving the frames",
+							Type:    discordgo.GameTypeStreaming,
+						},
+					},
+
+					GuildID: "foo",
+				},
+			},
+			want: map[string]streamerStatus{
+				"foo": {
+					statusStreamingKey: true,
+				},
+				"baz": {
 					statusStreamingKey: false,
 				},
 			},
