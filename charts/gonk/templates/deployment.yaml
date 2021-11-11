@@ -31,6 +31,10 @@ spec:
                         value: {{ .Values.discord.guildID }}
                       - name: DISCORD_USER_ID
                         value: {{ .Values.discord.userID }}
+                      - name: DISCORDGO_LOG_LEVEL
+                        value: {{ .Values.discord.discordgoLogLevel }}
+                      - name: GONK_LOG_LEVEL
+                        value: {{ .Values.discord.logLevel }}
                       - name: TCDB_API_KEY
                         valueFrom:
                             secretKeyRef:

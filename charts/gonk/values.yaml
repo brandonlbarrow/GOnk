@@ -85,4 +85,11 @@ tolerations: []
 
 affinity: {}
 
-discord: { guildID: "", userID: "", streamChannelID: "" }
+discord:
+  {
+    guildID: "",
+    userID: "",
+    streamChannelID: "",
+    discordgoLogLevel: "",
+    logLevel: "",
+  }
