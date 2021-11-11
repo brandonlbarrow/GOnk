@@ -16,7 +16,9 @@ type Event func(state State) State
 
 func NewStateMachine() *StateMachine {
 	sm := make(map[State]Event)
-	return &StateMachine{states: sm}
+	return &StateMachine{states: sm,
+		lock: &sync.Mutex{},
+	}
 }
 
 type StateEvent struct {
