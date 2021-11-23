@@ -3,6 +3,16 @@ entries:
   gonk:
   - apiVersion: v2
     appVersion: 1.0.0
+    created: "2021-11-23T22:46:34.689068938Z"
+    description: Installs GOnk, a Discord bot for The Cantina
+    digest: 67b70aa837cfa9ae1a3b4053d78bf1d145862c154418df64316b0b483dcdfb64
+    name: gonk
+    type: application
+    urls:
+    - https://github.com/brandonlbarrow/GOnk/releases/download/gonk-0.1.2/gonk-0.1.2.tgz
+    version: 0.1.2
+  - apiVersion: v2
+    appVersion: 1.0.0
     created: "2021-11-23T21:01:24.206277183Z"
     description: Installs GOnk, a Discord bot for The Cantina
     digest: 5e87ce1ddbfb7910fe75aeeac957a000de5bc35060d9704639d00cbcd738c5a6
@@ -21,4 +31,4 @@ entries:
     urls:
     - https://github.com/brandonlbarrow/GOnk/releases/download/gonk-0.1.0/gonk-0.1.0.tgz
     version: 0.1.0
-generated: "2021-11-23T21:01:24.206283983Z"
+generated: "2021-11-23T22:46:34.689096339Z"
