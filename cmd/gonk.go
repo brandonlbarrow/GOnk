@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/brandonlbarrow/gonk/internal/discord"
+	"github.com/brandonlbarrow/gonk/internal/handler"
 	"github.com/brandonlbarrow/gonk/internal/handler/cocktail"
 	"github.com/brandonlbarrow/gonk/internal/handler/info"
 	"github.com/sirupsen/logrus"
@@ -33,12 +34,14 @@ var (
 		stream.WithLogger(log),
 		stream.WithUserID(userID),
 	)
-	infoHandler     = info.NewHandler()
+	infoHandler = info.NewHandler(
+		info.WithGuildID(guildID),
+	)
 	cocktailHandler = cocktail.NewHandler(
 		cocktail.WithGuildID(guildID),
 		cocktail.WithTCDBAPIKey(tcdbAPIKey),
 	)
-	handlerMap = map[string]interface{}{
+	handlerMap = handler.HandlerMap{
 		"stream":   streamHandler.Handle,
 		"cocktail": cocktailHandler.Handle,
 		"info":     infoHandler.Handle,
@@ -46,9 +49,6 @@ var (
 )
 
 func main() {
-
-	// TODO remove
-	guildID := "308755439145713680"
 
 	mgr := discord.NewManager(
 		discord.WithGuildID(guildID),

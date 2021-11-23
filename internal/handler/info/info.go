@@ -26,6 +26,7 @@ type Handler struct {
 	maintainer string
 	start      time.Time
 	details    string
+	guildID    string
 }
 
 type HandlerOption func(h *Handler)
@@ -33,6 +34,12 @@ type HandlerOption func(h *Handler)
 func WithVersion(version string) HandlerOption {
 	return func(h *Handler) {
 		h.version = version
+	}
+}
+
+func WithGuildID(guildID string) HandlerOption {
+	return func(h *Handler) {
+		h.guildID = guildID
 	}
 }
 
@@ -52,6 +59,9 @@ func NewHandler(opts ...HandlerOption) *Handler {
 
 func (h *Handler) Handle(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
+		return
+	}
+	if h.guildID != m.GuildID {
 		return
 	}
 	if strings.HasPrefix(m.Content, infoCmd) {
