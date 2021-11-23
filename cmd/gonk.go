@@ -1,66 +1,102 @@
 package main
 
 import (
-	"errors"
+	"context"
 	"fmt"
-	"github.com/brandonlbarrow/gonk/internal/cocktail"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
-	"github.com/brandonlbarrow/gonk/internal/stream"
-	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
+	"github.com/brandonlbarrow/gonk/internal/discord"
+	"github.com/brandonlbarrow/gonk/internal/handler/cocktail"
+	"github.com/brandonlbarrow/gonk/internal/handler/info"
+	"github.com/sirupsen/logrus"
+
+	"github.com/brandonlbarrow/gonk/internal/handler/stream"
+
+	_ "github.com/joho/godotenv/autoload"
 )
 
-func init() {
-	switch os.Getenv("ENVIRONMENT") {
-	case strings.ToLower("local"):
-		if err := godotenv.Load(); err != nil {
-			panic(errors.New("No .env file found"))
-		}
+var (
+	gonkLogLevel      = os.Getenv("GONK_LOG_LEVEL")            // the log level of the main Gonk process. Defaults to Info
+	discordgoLogLevel = os.Getenv("DISCORDGO_LOG_LEVEL")       // the log level of the Discordgo session client. See https://pkg.go.dev/github.com/bwmarrin/discordgo#pkg-constants for options. Defaults to LogError
+	guildID           = os.Getenv("DISCORD_GUILD_ID")          // the Discord server ID to use for this installation of Gonk.
+	channelID         = os.Getenv("DISCORD_STREAM_CHANNEL_ID") // the Discord channel ID to send events for the stream handler to
+	token             = os.Getenv("DISCORD_BOT_TOKEN")         // the bot token for use with the Discord API.
+	userID            = os.Getenv("DISCORD_USER_ID")           // the Discord user ID to match events on for sending streaming notifications.
+	tcdbAPIKey        = os.Getenv("TCDB_API_KEY")              // The Cocktail DB API key for !drank command functionality
+
+	log = newLogger(gonkLogLevel)
+
+	streamHandler = stream.NewHandler(
+		stream.WithChannelID(channelID),
+		stream.WithGuildID(guildID),
+		stream.WithLogger(log),
+		stream.WithUserID(userID),
+	)
+	infoHandler     = info.NewHandler()
+	cocktailHandler = cocktail.NewHandler(
+		cocktail.WithGuildID(guildID),
+		cocktail.WithTCDBAPIKey(tcdbAPIKey),
+	)
+	handlerMap = map[string]interface{}{
+		"stream":   streamHandler.Handle,
+		"cocktail": cocktailHandler.Handle,
+		"info":     infoHandler.Handle,
 	}
-	return
-}
+)
 
 func main() {
 
-	discord := initDiscordSession()
-	discord.AddHandler(stream.Handler)
-	discord.AddHandler(cocktail.Handler)
+	// TODO remove
+	guildID := "308755439145713680"
 
-	// https://discord.com/developers/docs/topics/gateway#gateway-intents
-	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessages | discordgo.IntentsGuildMessageReactions)
+	mgr := discord.NewManager(
+		discord.WithGuildID(guildID),
+		discord.MustWithSession(token,
+			discord.NewSessionArgs(
+				discord.WithLogLevel(
+					discord.DiscordLogLevelFromString(discordgoLogLevel)))),
+	)
 
-	err := discord.Open()
-	if err != nil {
-		fmt.Println("Error opening discord session: ", err)
-		return
+	log.Debugf("manager created: %v", mgr)
+
+	for name, handler := range handlerMap {
+		log.Infof("adding handler %s", name)
+		mgr.AddHandler(handler)
 	}
 
-	fmt.Println("GOnk bot is now running.  Press CTRL-C to exit.")
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
-	<-sc
+	done := make(chan error)
 
-}
-
-func initDiscordSession() *discordgo.Session {
-
-	token, exists := os.LookupEnv("TOKEN")
-	if !exists {
-		fmt.Println("Cannot find env variable TOKEN. Please ensure this is set to use gonk.")
+	go run(mgr, done)
+	log.Info("GOnk is now running.")
+	err := <-done
+	if err != nil {
+		log.Errorf("GOnk encountered an error while running: %v", err)
 		os.Exit(1)
 	}
+}
 
-	session, err := discordgo.New("Bot " + token)
-	if err != nil {
-		fmt.Println("Error initializing", err)
-		return session
+func run(mgr *discord.Manager, done chan error) error {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := mgr.Run(ctx); err != nil {
+		done <- fmt.Errorf("error running manager discordgo session, %w", err)
 	}
+	return nil
+}
 
-	session.StateEnabled = true
+func newLogger(level string) *logrus.Logger {
 
-	return session
+	logger := logrus.New()
+	logger.SetOutput(os.Stdout)
+	logger.SetFormatter(&logrus.JSONFormatter{})
+
+	l, err := logrus.ParseLevel(strings.ToLower(level))
+	if err != nil {
+		logger.SetLevel(logrus.InfoLevel)
+	} else {
+		logger.SetLevel(l)
+	}
+	return logger
 }
