@@ -21,16 +21,16 @@ spec:
                       - name: PATH
                         value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
                       - name: DISCORD_STREAM_CHANNEL_ID
-                        value: {{ .Values.discord.streamChannelID }}
+                        value: {{ quote .Values.discord.streamChannelID }}
                       - name: DISCORD_BOT_TOKEN
                         valueFrom:
                             secretKeyRef:
                                 name: gonk
                                 key: TOKEN
                       - name: DISCORD_GUILD_ID
-                        value: {{ .Values.discord.guildID }}
+                        value: {{ quote .Values.discord.guildID }}
                       - name: DISCORD_USER_ID
-                        value: {{ .Values.discord.userID }}
+                        value: {{ quote .Values.discord.userID }}
                       - name: DISCORDGO_LOG_LEVEL
                         value: {{ .Values.discord.discordgoLogLevel }}
                       - name: GONK_LOG_LEVEL
