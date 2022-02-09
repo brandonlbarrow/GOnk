@@ -50,7 +50,7 @@ func NewSessionArgs(args ...SessionArg) *SessionArgs {
 	s := &SessionArgs{
 		LogLevel:     discordgo.LogError,
 		StateEnabled: true,
-		Intents:      discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessages | discordgo.IntentsGuildMessageReactions),
+		Intents:      discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessages | discordgo.IntentsGuildMessageReactions | discordgo.IntentsDirectMessageReactions),
 	}
 	for _, arg := range args {
 		arg(s)

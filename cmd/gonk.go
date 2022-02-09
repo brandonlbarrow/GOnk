@@ -10,6 +10,7 @@ import (
 	"github.com/brandonlbarrow/gonk/internal/handler"
 	"github.com/brandonlbarrow/gonk/internal/handler/cocktail"
 	"github.com/brandonlbarrow/gonk/internal/handler/info"
+	"github.com/brandonlbarrow/gonk/internal/handler/role"
 	"github.com/sirupsen/logrus"
 
 	"github.com/brandonlbarrow/gonk/internal/handler/stream"
@@ -41,10 +42,12 @@ var (
 		cocktail.WithGuildID(guildID),
 		cocktail.WithTCDBAPIKey(tcdbAPIKey),
 	)
-	handlerMap = handler.HandlerMap{
+	roleHandler = role.NewHandler(role.WithGuildID(guildID))
+	handlerMap  = handler.HandlerMap{
 		"stream":   streamHandler.Handle,
 		"cocktail": cocktailHandler.Handle,
 		"info":     infoHandler.Handle,
+		"role":     roleHandler.Handle,
 	}
 )
 
