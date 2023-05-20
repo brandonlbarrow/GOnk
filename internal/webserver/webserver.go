@@ -4,10 +4,19 @@ import (
 	"net/http"
 )
 
-type Mux struct {
-
+func RegisterRoutes(m *http.ServeMux) {
+	m.Handle("/", rootHandler())
 }
 
-func RegisterRoutes(m *http.Mux) {
-	
+func rootHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func twitchHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// do twitch stuff
+		w.WriteHeader(http.StatusOK)
+	}
 }
