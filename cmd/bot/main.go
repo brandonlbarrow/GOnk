@@ -19,30 +19,19 @@ import (
 )
 
 var (
-	gonkLogLevel      = os.Getenv("GONK_LOG_LEVEL")            // the log level of the main Gonk process. Defaults to Info
-	discordgoLogLevel = os.Getenv("DISCORDGO_LOG_LEVEL")       // the log level of the Discordgo session client. See https://pkg.go.dev/github.com/bwmarrin/discordgo#pkg-constants for options. Defaults to LogError
-	guildID           = os.Getenv("DISCORD_GUILD_ID")          // the Discord server ID to use for this installation of Gonk.
-	channelID         = os.Getenv("DISCORD_STREAM_CHANNEL_ID") // the Discord channel ID to send events for the stream handler to
-	token             = os.Getenv("DISCORD_BOT_TOKEN")         // the bot token for use with the Discord API.
-	userID            = os.Getenv("DISCORD_USER_ID")           // the Discord user ID to match events on for sending streaming notifications.
-	tcdbAPIKey        = os.Getenv("TCDB_API_KEY")              // The Cocktail DB API key for !drank command functionality
+	gonkLogLevel      = os.Getenv("GONK_LOG_LEVEL")      // the log level of the main Gonk process. Defaults to Info
+	discordgoLogLevel = os.Getenv("DISCORDGO_LOG_LEVEL") // the log level of the Discordgo session client. See https://pkg.go.dev/github.com/bwmarrin/discordgo#pkg-constants for options. Defaults to LogError
+	token             = os.Getenv("DISCORD_BOT_TOKEN")   // the bot token for use with the Discord API.
+	tcdbAPIKey        = os.Getenv("TCDB_API_KEY")        // The Cocktail DB API key for !drank command functionality
 
 	log = newLogger(gonkLogLevel)
 
-	streamHandler = stream.NewHandler(
-		stream.WithChannelID(channelID),
-		stream.WithGuildID(guildID),
-		stream.WithLogger(log),
-		stream.WithUserID(userID),
-	)
-	infoHandler = info.NewHandler(
-		info.WithGuildID(guildID),
-	)
+	streamHandler   = stream.NewHandler()
+	infoHandler     = info.NewHandler()
 	cocktailHandler = cocktail.NewHandler(
-		cocktail.WithGuildID(guildID),
 		cocktail.WithTCDBAPIKey(tcdbAPIKey),
 	)
-	roleHandler = role.NewHandler(role.WithGuildID(guildID))
+	roleHandler = role.NewHandler()
 	handlerMap  = handler.HandlerMap{
 		"stream":   streamHandler.Handle,
 		"cocktail": cocktailHandler.Handle,
@@ -53,8 +42,8 @@ var (
 
 func main() {
 
+	// Manager will manage the Discord session, and execute handlers, which will have different behavior based on the server configuration.
 	mgr := discord.NewManager(
-		discord.WithGuildID(guildID),
 		discord.MustWithSession(token,
 			discord.NewSessionArgs(
 				discord.WithLogLevel(
@@ -70,7 +59,10 @@ func main() {
 
 	done := make(chan error)
 
-	go run(mgr, done)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go run(ctx, mgr, done)
 	log.Info("GOnk is now running.")
 	err := <-done
 	if err != nil {
@@ -79,10 +71,7 @@ func main() {
 	}
 }
 
-func run(mgr *discord.Manager, done chan error) error {
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func run(ctx context.Context, mgr *discord.Manager, done chan error) error {
 	if err := mgr.Run(ctx); err != nil {
 		done <- fmt.Errorf("error running manager discordgo session, %w", err)
 	}
