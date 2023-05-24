@@ -3,6 +3,7 @@ package stream
 import (
 	"sync"
 
+	"github.com/brandonlbarrow/gonk/v2/internal/db"
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 )
@@ -14,45 +15,8 @@ const (
 // Handler receives PresenceUpdate events from the Discord API and handles them. Streaming notifications will be sent to the channelID and guildID for any user.
 // If a userID is supplied, then stream notification events will only be sent for events matching the userID.
 type Handler struct {
-	logger      *logrus.Logger
-	guildID     string
-	channelID   string
-	userID      string
-	streamerMap *streamerMap
-}
-
-type streamerMap struct {
-	streamList map[string]streamerStatus
-	lock       sync.RWMutex
-}
-
-func newStreamerMap() *streamerMap {
-	streamList := make(map[string]streamerStatus)
-	return &streamerMap{
-		lock:       sync.RWMutex{},
-		streamList: streamList,
-	}
-}
-
-type streamerStatus map[string]bool
-
-func (s *streamerMap) getStreamList() map[string]streamerStatus {
-	return s.streamList
-}
-
-func (s *streamerMap) userIsStreaming(userID string) bool {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	if _, ok := s.streamList[userID]; ok {
-		return s.streamList[userID][statusStreamingKey]
-	}
-	return false
-}
-
-func (s *streamerMap) setUserStreamStatus(userID string, streaming bool) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.streamList[userID][statusStreamingKey] = streaming
+	logger *logrus.Logger
+	repo   db.ServerRepo
 }
 
 // Sessioner is used by *discordgo.Session objects
@@ -63,11 +27,9 @@ type Sessioner interface {
 
 // NewHandler creates an instance of *Handler.
 func NewHandler(opts ...HandlerOption) *Handler {
-	streamerMap := newStreamerMap()
 	logger := logrus.New()
 	h := &Handler{
-		logger:      logger,
-		streamerMap: streamerMap,
+		logger: logger,
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -78,20 +40,6 @@ func NewHandler(opts ...HandlerOption) *Handler {
 // HandlerOption is an option passed to NewHandler to set struct fields.
 type HandlerOption func(m *Handler)
 
-// WithGuildID sets the discord guild ID for the Handler.
-func WithGuildID(guildID string) HandlerOption {
-	return func(m *Handler) {
-		m.guildID = guildID
-	}
-}
-
-// WithChannelID sets the discord channel ID for the Handler to send streaming events to.
-func WithChannelID(channelID string) HandlerOption {
-	return func(m *Handler) {
-		m.channelID = channelID
-	}
-}
-
 // WithLogger sets the logrus instance for the Handler.
 func WithLogger(logger *logrus.Logger) HandlerOption {
 	return func(m *Handler) {
@@ -99,10 +47,9 @@ func WithLogger(logger *logrus.Logger) HandlerOption {
 	}
 }
 
-// WithUserID sets the discord user ID for the Handler to send streaming events for. If this is set, only the user ID provided will trigger notifications when they go live.
-func WithUserID(userID string) HandlerOption {
+func WithRepo(repo db.ServerRepo) HandlerOption {
 	return func(m *Handler) {
-		m.userID = userID
+		m.repo = repo
 	}
 }
 
@@ -110,80 +57,21 @@ func WithUserID(userID string) HandlerOption {
 // on Twitch if their Discord user account has a Twitch notification set up, they are set to show their Game (currently playing) status on Discord, and they go from a non-streaming state to a streaming state.
 // "Game" is Discord's term for any game or streaming session the user may be playing/hosting. Game is usually a video game or some program that Discord assumes is a game, and Game becomes a streaming status when the user goes live and has
 // a streaming platform such as Twitch integrated with their account.
-func (m *Handler) Handle(s *discordgo.Session, p *discordgo.PresenceUpdate) {
 
-	m.logger.WithFields(presenceUpdateFields(p)).Info("presenceUpdate user info:")
-	m.logger.WithFields(logrus.Fields{"streamList": m.streamerMap.getStreamList()}).Info("current stream list:")
-	m.streamHandler(s, p)
+func (h *Handler) Handle(s *discordgo.Session, m *discordgo.MessageCreate) {
+	h.streamHandler(s, m)
 }
 
-// streamHandler references an in-memory map in Handler to keep track of user streaming state. This map is populated as events come in.
-func (m *Handler) streamHandler(s Sessioner, p *discordgo.PresenceUpdate) {
+// streamHandler configures Gonk's stream handler for the Discord server and stores the configuration in the repo
+func (m *Handler) streamHandler(s Sessioner, p *discordgo.MessageCreate) {
 
-	// if the PresenceUpdate object is empty or the User is nil, return false. We don't care about events that don't have these.
-	if !validatePresenceUpdateObject(p) {
-		m.logger.WithFields(logrus.Fields{"presenceUpdateObject": p}).Debug("presenceUpdate failed validation, skipping")
+	guildID := extractGuildIDFromMessageCreate(p)
+	serverConfig, err := m.repo.GetServerByID(guildID)
+	if err != nil {
+		m.logger.Errorf("error getting server config: %w", err)
 		return
-	}
+	} else if serverConfig != nil {
 
-	// validate that the PresenceUpdate's server id matches the one Gonk has been configured to operate in, otherwise skip it
-	if !validateGuildID(p, m.guildID) {
-		m.logger.WithFields(logrus.Fields{"providedGuildID": m.guildID, "eventGuildID": p.GuildID}).Debug("guild ID does not match PresenceUpdate, skipping")
-		return
-	}
-
-	// validation for single user mode
-	if !validateUserID(p, m.userID) {
-		m.logger.WithFields(logrus.Fields{"providedUserID": m.userID, "eventUser": p.User}).Debug("user ID does not match PresenceUpdate, skipping")
-		return
-	}
-
-	// get the userID and initialize their streaming state as false if they don't already exist in the map of streamerIDs to streamerStatus
-	userID := p.Presence.User.ID
-	_, ok := m.streamerMap.streamList[userID]
-	if !ok {
-		m.streamerMap.streamList[userID] = map[string]bool{"streaming": false}
-	}
-
-	if p.Game == nil {
-		m.streamerMap.setUserStreamStatus(userID, false)
-		m.logger.WithFields(logrus.Fields{"userID": userID, "streamingStatus": false}).Debug("user is not playing a game, no change")
-		return
-	}
-
-	if p.Game.Type == discordgo.GameTypeStreaming {
-		streaming := m.streamerMap.userIsStreaming(userID)
-		if streaming {
-			m.logger.WithFields(logrus.Fields{"userID": userID, "gameType": p.Game.Type, "streamingStatus": streaming}).Debug("no change")
-			return
-		} else {
-			m.streamerMap.setUserStreamStatus(userID, true)
-			m.logger.WithFields(logrus.Fields{"userID": userID, "gameType": p.Game.Type, "streamingStatus": m.streamerMap.userIsStreaming(userID)}).Info("user has started streaming.")
-		}
-	}
-
-	if p.Game.Type != discordgo.GameTypeStreaming {
-		streaming := m.streamerMap.userIsStreaming(userID)
-		if !streaming {
-			m.logger.WithFields(logrus.Fields{"userID": userID, "gameType": p.Game.Type, "streamingStatus": streaming}).Debug("no change")
-			return
-		} else {
-			m.streamerMap.setUserStreamStatus(userID, false)
-			m.logger.WithFields(logrus.Fields{"userID": userID, "gameType": p.Game.Type, "streamingStatus": m.streamerMap.userIsStreaming(userID)}).Info("Stream ended, or not streaming anymore.")
-		}
-	}
-
-	if m.streamerMap.userIsStreaming(userID) {
-		user, err := m.getUser(s, p.Presence.User.ID)
-		if err != nil {
-			m.logger.WithFields(logrus.Fields{"userID": userID}).Error("could not find username from supplied user id, cannot send streaming message.")
-			return
-		}
-		if p.Nick != "" {
-			user = p.Nick
-		}
-		messageBody := formatMessage(user, p.Game.State, p.Game.Details, p.Game.URL)
-		s.ChannelMessageSend(m.channelID, messageBody)
 	}
 }
 
@@ -203,58 +91,14 @@ func formatMessage(user string, assets string, details string, url string) strin
 	return message
 }
 
-func validateGuildID(p *discordgo.PresenceUpdate, g string) bool {
-	return p.GuildID == g
-}
-
-func validateUserID(p *discordgo.PresenceUpdate, u string) bool {
-	if u == "" {
-		return true
+func extractGuildIDFromMessageCreate(m *discordgo.MessageCreate) string {
+	if m != nil && m.GuildID != "" {
+		return m.GuildID
 	}
-	if p.User != nil {
-		return p.User.ID == u
+	if m.Member != nil && m.Member.GuildID != "" {
+		return m.Member.GuildID
 	}
-	return false
-}
-
-func presenceUpdateFields(p *discordgo.PresenceUpdate) logrus.Fields {
-	if p == nil {
-		return logrus.Fields{}
+	if m.MessageReference != nil && m.MessageReference.GuildID != "" {
+		return m.MessageReference.GuildID
 	}
-	baseFields := logrus.Fields{
-		"nickname": p.Nick,
-		"guildID":  p.GuildID,
-		"status":   p.Status,
-	}
-	if p.User != nil {
-		userFields := logrus.Fields{
-			"username": p.User.Username,
-			"id":       p.User.ID,
-		}
-		for k, v := range userFields {
-			baseFields[k] = v
-		}
-	}
-	if p.Game != nil {
-		gameFields := logrus.Fields{
-			"name":    p.Game.Name,
-			"type":    p.Game.Type,
-			"url":     p.Game.URL,
-			"details": p.Game.Details,
-		}
-		for k, v := range gameFields {
-			baseFields[k] = v
-		}
-	}
-	return baseFields
-}
-
-func validatePresenceUpdateObject(p *discordgo.PresenceUpdate) bool {
-	if p == nil {
-		return false
-	}
-	if p.Presence.User == nil {
-		return false
-	}
-	return true
 }

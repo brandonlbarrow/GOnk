@@ -1,0 +1,11 @@
+{
+    "1": {
+        "guild_id": "1",
+        "streamers": [
+            {
+                "user_id": "2",
+                "channel_id": "3"
+            }
+        ]
+    }
+}
