@@ -39,7 +39,7 @@ func WithGuildID(guildID string) ManagerOption {
 type SessionArgs struct {
 	StateEnabled bool
 	LogLevel     int
-	Intents      *discordgo.Intent // https://discord.com/developers/docs/topics/gateway#gateway-intents
+	Intents      discordgo.Intent // https://discord.com/developers/docs/topics/gateway#gateway-intents
 
 }
 

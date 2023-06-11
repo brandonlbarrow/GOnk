@@ -57,8 +57,8 @@ func (s *streamerMap) setUserStreamStatus(userID string, streaming bool) {
 
 // Sessioner is used by *discordgo.Session objects
 type Sessioner interface {
-	ChannelMessageSend(channelID string, content string) (*discordgo.Message, error)
-	User(userID string) (st *discordgo.User, err error)
+	ChannelMessageSend(string, string, ...discordgo.RequestOption) (*discordgo.Message, error)
+	User(string, ...discordgo.RequestOption) (*discordgo.User, error)
 }
 
 // NewHandler creates an instance of *Handler.
@@ -145,46 +145,41 @@ func (m *Handler) streamHandler(s Sessioner, p *discordgo.PresenceUpdate) {
 		m.streamerMap.streamList[userID] = map[string]bool{"streaming": false}
 	}
 
-	if p.Game == nil {
+	if len(p.Presence.Activities) == 0 {
 		m.streamerMap.setUserStreamStatus(userID, false)
-		m.logger.WithFields(logrus.Fields{"userID": userID, "streamingStatus": false}).Debug("user is not playing a game, no change")
-		return
+	}
+	for i, activity := range p.Presence.Activities {
+		m.logger.WithFields(logrus.Fields{"index": i, "activityName": activity.Name, "activityType": activity.Type}).Info("activities")
+		if activity.Type == discordgo.ActivityTypeStreaming {
+			streaming := m.streamerMap.userIsStreaming(userID)
+			if streaming {
+				m.logger.WithFields(logrus.Fields{"userID": userID, "gameType": activity.Type, "streamingStatus": streaming}).Debug("no change")
+			} else {
+				m.streamerMap.setUserStreamStatus(userID, true)
+				m.logger.WithFields(logrus.Fields{"userID": userID, "gameType": activity.Type, "streamingStatus": m.streamerMap.userIsStreaming(userID)}).Info("user has started streaming.")
+			}
+		}
+
+		if activity.Type != discordgo.ActivityTypeStreaming {
+			streaming := m.streamerMap.userIsStreaming(userID)
+			if !streaming {
+				m.logger.WithFields(logrus.Fields{"userID": userID, "gameType": activity.Type, "streamingStatus": streaming}).Debug("no change")
+			} else {
+				m.streamerMap.setUserStreamStatus(userID, false)
+				m.logger.WithFields(logrus.Fields{"userID": userID, "gameType": activity.Type, "streamingStatus": m.streamerMap.userIsStreaming(userID)}).Info("Stream ended, or not streaming anymore.")
+			}
+		}
+		if m.streamerMap.userIsStreaming(userID) {
+			user, err := m.getUser(s, p.Presence.User.ID)
+			if err != nil {
+				m.logger.WithFields(logrus.Fields{"userID": userID}).Error("could not find username from supplied user id, cannot send streaming message.")
+				return
+			}
+			messageBody := formatMessage(user, activity.State, activity.Details, activity.URL)
+			s.ChannelMessageSend(m.channelID, messageBody)
+		}
 	}
 
-	if p.Game.Type == discordgo.GameTypeStreaming {
-		streaming := m.streamerMap.userIsStreaming(userID)
-		if streaming {
-			m.logger.WithFields(logrus.Fields{"userID": userID, "gameType": p.Game.Type, "streamingStatus": streaming}).Debug("no change")
-			return
-		} else {
-			m.streamerMap.setUserStreamStatus(userID, true)
-			m.logger.WithFields(logrus.Fields{"userID": userID, "gameType": p.Game.Type, "streamingStatus": m.streamerMap.userIsStreaming(userID)}).Info("user has started streaming.")
-		}
-	}
-
-	if p.Game.Type != discordgo.GameTypeStreaming {
-		streaming := m.streamerMap.userIsStreaming(userID)
-		if !streaming {
-			m.logger.WithFields(logrus.Fields{"userID": userID, "gameType": p.Game.Type, "streamingStatus": streaming}).Debug("no change")
-			return
-		} else {
-			m.streamerMap.setUserStreamStatus(userID, false)
-			m.logger.WithFields(logrus.Fields{"userID": userID, "gameType": p.Game.Type, "streamingStatus": m.streamerMap.userIsStreaming(userID)}).Info("Stream ended, or not streaming anymore.")
-		}
-	}
-
-	if m.streamerMap.userIsStreaming(userID) {
-		user, err := m.getUser(s, p.Presence.User.ID)
-		if err != nil {
-			m.logger.WithFields(logrus.Fields{"userID": userID}).Error("could not find username from supplied user id, cannot send streaming message.")
-			return
-		}
-		if p.Nick != "" {
-			user = p.Nick
-		}
-		messageBody := formatMessage(user, p.Game.State, p.Game.Details, p.Game.URL)
-		s.ChannelMessageSend(m.channelID, messageBody)
-	}
 }
 
 func (m *Handler) getUser(s Sessioner, usrID string) (string, error) {
@@ -222,9 +217,8 @@ func presenceUpdateFields(p *discordgo.PresenceUpdate) logrus.Fields {
 		return logrus.Fields{}
 	}
 	baseFields := logrus.Fields{
-		"nickname": p.Nick,
-		"guildID":  p.GuildID,
-		"status":   p.Status,
+		"guildID": p.GuildID,
+		"status":  p.Status,
 	}
 	if p.User != nil {
 		userFields := logrus.Fields{
@@ -232,17 +226,6 @@ func presenceUpdateFields(p *discordgo.PresenceUpdate) logrus.Fields {
 			"id":       p.User.ID,
 		}
 		for k, v := range userFields {
-			baseFields[k] = v
-		}
-	}
-	if p.Game != nil {
-		gameFields := logrus.Fields{
-			"name":    p.Game.Name,
-			"type":    p.Game.Type,
-			"url":     p.Game.URL,
-			"details": p.Game.Details,
-		}
-		for k, v := range gameFields {
 			baseFields[k] = v
 		}
 	}

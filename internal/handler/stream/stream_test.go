@@ -53,11 +53,13 @@ func TestHandler_streamHandler(t *testing.T) {
 							ID:       "foo",
 							Username: "bar",
 						},
-						Game: &discordgo.Game{
-							Name:    "Mystical Ninja Starring Goemon",
-							URL:     "https://twitch.tv/",
-							Details: "ganbare",
-							Type:    discordgo.GameTypeStreaming,
+						Activities: []*discordgo.Activity{
+							{
+								Name:    "Mystical Ninja Starring Goemon",
+								URL:     "https://twitch.tv/",
+								Details: "ganbare",
+								Type:    discordgo.ActivityTypeStreaming,
+							},
 						},
 					},
 					GuildID: "foo",
@@ -98,9 +100,11 @@ func TestHandler_streamHandler(t *testing.T) {
 							ID:       "foo",
 							Username: "bar",
 						},
-						Game: &discordgo.Game{
-							Name: "Mystical Ninja Starring Goemon",
-							Type: discordgo.GameTypeGame,
+						Activities: []*discordgo.Activity{
+							{
+								Name: "Mystical Ninja Starring Goemon",
+								Type: discordgo.ActivityTypeGame,
+							},
 						},
 					},
 					GuildID: "foo",
@@ -134,11 +138,13 @@ func TestHandler_streamHandler(t *testing.T) {
 							ID:       "foo",
 							Username: "bar",
 						},
-						Game: &discordgo.Game{
-							Name:    "Mystical Ninja Starring Goemon",
-							URL:     "https://twitch.tv/",
-							Details: "ganbare",
-							Type:    discordgo.GameTypeStreaming,
+						Activities: []*discordgo.Activity{
+							{
+								Name:    "Mystical Ninja Starring Goemon",
+								URL:     "https://twitch.tv/",
+								Details: "ganbare",
+								Type:    discordgo.ActivityTypeStreaming,
+							},
 						},
 					},
 					GuildID: "foo",
@@ -172,11 +178,13 @@ func TestHandler_streamHandler(t *testing.T) {
 							ID:       "baz",
 							Username: "bar",
 						},
-						Game: &discordgo.Game{
-							Name:    "Super Metroid",
-							URL:     "https://twitch.tv/",
-							Details: "Saving the frames",
-							Type:    discordgo.GameTypeStreaming,
+						Activities: []*discordgo.Activity{
+							{
+								Name:    "Super Metroid",
+								URL:     "https://twitch.tv/",
+								Details: "Saving the frames",
+								Type:    discordgo.ActivityTypeStreaming,
+							},
 						},
 					},
 					GuildID: "foo",
@@ -213,11 +221,12 @@ func TestHandler_streamHandler(t *testing.T) {
 							ID:       "foo",
 							Username: "bar",
 						},
-						Game: &discordgo.Game{
-							Name:    "Mystical Ninja Starring Goemon",
-							URL:     "https://twitch.tv/",
-							Details: "ganbare",
-							Type:    discordgo.GameTypeGame,
+						Activities: []*discordgo.Activity{
+							{Name: "Mystical Ninja Starring Goemon",
+								URL:     "https://twitch.tv/",
+								Details: "ganbare",
+								Type:    discordgo.ActivityTypeGame,
+							},
 						},
 					},
 					GuildID: "foo",
@@ -325,11 +334,12 @@ func TestHandler_streamHandler(t *testing.T) {
 							ID:       "foo",
 							Username: "bar",
 						},
-						Game: &discordgo.Game{
-							Name:    "Mystical Ninja Starring Goemon",
-							URL:     "https://twitch.tv/",
-							Details: "ganbare",
-							Type:    discordgo.GameTypeStreaming,
+						Activities: []*discordgo.Activity{
+							{Name: "Mystical Ninja Starring Goemon",
+								URL:     "https://twitch.tv/",
+								Details: "ganbare",
+								Type:    discordgo.ActivityTypeStreaming,
+							},
 						},
 					},
 
@@ -368,11 +378,12 @@ func TestHandler_streamHandler(t *testing.T) {
 							ID:       "baz",
 							Username: "bar",
 						},
-						Game: &discordgo.Game{
-							Name:    "Super Metroid",
-							URL:     "https://twitch.tv/",
-							Details: "Saving the frames",
-							Type:    discordgo.GameTypeStreaming,
+						Activities: []*discordgo.Activity{
+							{Name: "Super Metroid",
+								URL:     "https://twitch.tv/",
+								Details: "Saving the frames",
+								Type:    discordgo.ActivityTypeStreaming,
+							},
 						},
 					},
 
@@ -392,6 +403,7 @@ func TestHandler_streamHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.m.streamHandler(tt.args.s, tt.args.p)
+			t.Log(tt.m.streamerMap.getStreamList())
 			diff := deep.Equal(tt.m.streamerMap.getStreamList(), tt.want)
 			if len(diff) > 0 {
 				t.Errorf("got diff %v", diff)
@@ -408,10 +420,10 @@ type mockSessioner struct {
 	respSendMessage *discordgo.Message
 }
 
-func (m *mockSessioner) ChannelMessageSend(string, string) (*discordgo.Message, error) {
+func (m *mockSessioner) ChannelMessageSend(string, string, ...discordgo.RequestOption) (*discordgo.Message, error) {
 	return m.respSendMessage, m.errSendMessage
 }
 
-func (m *mockSessioner) User(id string) (*discordgo.User, error) {
+func (m *mockSessioner) User(id string, opt ...discordgo.RequestOption) (*discordgo.User, error) {
 	return m.respGetUser, m.errGetUser
 }
