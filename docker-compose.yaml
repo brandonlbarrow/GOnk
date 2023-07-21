@@ -1,0 +1,7 @@
+services:
+  gonk:
+    build: .
+    env_file: gonk.env
+    restart: always
+    ports:
+      - "8080:8080"

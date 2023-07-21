@@ -8,7 +8,7 @@ WORKDIR /gonk
 COPY . /gonk
 
 ## Build binary
-RUN CGO_ENABLED=0 go build -a -o gonk cmd/gonk.go
+RUN CGO_ENABLED=0 go build -a -o gonk cmd/bot/main.go
 
 ################################
 ## Cert Stage ##
@@ -31,6 +31,8 @@ COPY --from=builder /gonk/gonk /
 ENV TOKEN $TOKEN
 ENV GUILD_ID $GUILD_ID
 ENV STREAM_CHANNEL $STREAM_CHANNEL
+
+EXPOSE 8080
 
 ## Go Gonk Go!
 CMD ["/gonk"]

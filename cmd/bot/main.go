@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -11,9 +12,8 @@ import (
 	"github.com/brandonlbarrow/gonk/internal/handler/cocktail"
 	"github.com/brandonlbarrow/gonk/internal/handler/info"
 	"github.com/brandonlbarrow/gonk/internal/handler/role"
+	"github.com/brandonlbarrow/gonk/v2/internal/webserver"
 	"github.com/sirupsen/logrus"
-
-	"github.com/brandonlbarrow/gonk/internal/handler/stream"
 
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -26,14 +26,12 @@ var (
 
 	log = newLogger(gonkLogLevel)
 
-	streamHandler   = stream.NewHandler()
 	infoHandler     = info.NewHandler()
 	cocktailHandler = cocktail.NewHandler(
 		cocktail.WithTCDBAPIKey(tcdbAPIKey),
 	)
 	roleHandler = role.NewHandler()
 	handlerMap  = handler.HandlerMap{
-		"stream":   streamHandler.Handle,
 		"cocktail": cocktailHandler.Handle,
 		"info":     infoHandler.Handle,
 		"role":     roleHandler.Handle,
@@ -63,6 +61,7 @@ func main() {
 	defer cancel()
 
 	go run(ctx, mgr, done)
+	go runCallbackServer(ctx, done)
 	log.Info("GOnk is now running.")
 	err := <-done
 	if err != nil {
@@ -91,4 +90,14 @@ func newLogger(level string) *logrus.Logger {
 		logger.SetLevel(l)
 	}
 	return logger
+}
+
+func runCallbackServer(ctx context.Context, done chan error) error {
+	m := http.NewServeMux()
+	webserver.RegisterRoutes(m)
+	log.Info("starting webserver")
+	if err := http.ListenAndServe(":8080", m); err != nil {
+		done <- fmt.Errorf("error running callback server: %w", err)
+	}
+	return nil
 }

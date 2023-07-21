@@ -11,10 +11,9 @@ import (
 )
 
 const (
-	infoCmd    = "!info"
-	gonkRepo   = "https://github.com/brandonlbarrow/GOnk"
-	maintainer = "brandonlbarrow"
-	details    = `
+	infoCmd  = "!info"
+	gonkRepo = "https://github.com/brandonlbarrow/GOnk"
+	details  = `
 	GOnk is a Discord bot that announces Twitch streams and tells you how to make alcoholic drinks, among other things. GOnk is maintained by Brandoid and is written in the Go programming language. ~GoNk~
 	`
 )
@@ -45,11 +44,10 @@ func WithGuildID(guildID string) HandlerOption {
 
 func NewHandler(opts ...HandlerOption) *Handler {
 	h := &Handler{
-		version:    "1.0.0",
-		repo:       gonkRepo,
-		maintainer: maintainer,
-		start:      time.Now(),
-		details:    details,
+		version: "1.0.0",
+		repo:    gonkRepo,
+		start:   time.Now(),
+		details: details,
 	}
 	for _, opt := range opts {
 		opt(h)
