@@ -50,7 +50,7 @@ func NewSessionArgs(args ...SessionArg) *SessionArgs {
 	s := &SessionArgs{
 		LogLevel:     discordgo.LogError,
 		StateEnabled: true,
-		Intents:      discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessages | discordgo.IntentsGuildMessageReactions | discordgo.IntentsDirectMessageReactions),
+		//	Intents:      discordgo.MakeIntent(discordgo.IntentsGuildPresences | discordgo.IntentsGuildMessages | discordgo.IntentsGuildMessageReactions | discordgo.IntentsDirectMessageReactions),
 	}
 	for _, arg := range args {
 		arg(s)
@@ -74,7 +74,7 @@ func MustWithSession(token string, args *SessionArgs) ManagerOption {
 		}
 		session.LogLevel = args.LogLevel
 		session.StateEnabled = args.StateEnabled
-		session.Identify.Intents = args.Intents
+		//		session.Identify.Intents = args.Intents
 		m.discordSession = session
 	}
 }

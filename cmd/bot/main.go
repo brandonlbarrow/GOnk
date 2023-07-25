@@ -12,6 +12,7 @@ import (
 	"github.com/brandonlbarrow/gonk/internal/handler/cocktail"
 	"github.com/brandonlbarrow/gonk/internal/handler/info"
 	"github.com/brandonlbarrow/gonk/internal/handler/role"
+	"github.com/brandonlbarrow/gonk/v2/internal/twitch"
 	"github.com/brandonlbarrow/gonk/v2/internal/webserver"
 	"github.com/sirupsen/logrus"
 
@@ -19,10 +20,12 @@ import (
 )
 
 var (
-	gonkLogLevel      = os.Getenv("GONK_LOG_LEVEL")      // the log level of the main Gonk process. Defaults to Info
-	discordgoLogLevel = os.Getenv("DISCORDGO_LOG_LEVEL") // the log level of the Discordgo session client. See https://pkg.go.dev/github.com/bwmarrin/discordgo#pkg-constants for options. Defaults to LogError
-	token             = os.Getenv("DISCORD_BOT_TOKEN")   // the bot token for use with the Discord API.
-	tcdbAPIKey        = os.Getenv("TCDB_API_KEY")        // The Cocktail DB API key for !drank command functionality
+	gonkLogLevel       = os.Getenv("GONK_LOG_LEVEL")       // the log level of the main Gonk process. Defaults to Info
+	discordgoLogLevel  = os.Getenv("DISCORDGO_LOG_LEVEL")  // the log level of the Discordgo session client. See https://pkg.go.dev/github.com/bwmarrin/discordgo#pkg-constants for options. Defaults to LogError
+	token              = os.Getenv("DISCORD_BOT_TOKEN")    // the bot token for use with the Discord API.
+	tcdbAPIKey         = os.Getenv("TCDB_API_KEY")         // The Cocktail DB API key for !drank command functionality
+	twitchClientID     = os.Getenv("TWITCH_CLIENT_ID")     // ClientID of the ClientCredentials flow for Twitch functionality
+	twitchClientSecret = os.Getenv("TWITCH_CLIENT_SECRET") // ClientSecret of the ClientCredentials flow for Twitch functionality
 
 	log = newLogger(gonkLogLevel)
 
@@ -102,4 +105,17 @@ func runCallbackServer(ctx context.Context, done chan error) error {
 	return nil
 }
 
-func setupTwitch(ctx context.Context) {}
+func setupTwitch(ctx context.Context, clientID, clientSecret string, httpClient *http.Client) (*twitch.Client, error) {
+	if clientID == "" || clientSecret == "" {
+		return nil, fmt.Errorf("clientID and clientSecret must be provided")
+	}
+	if httpClient == nil {
+		httpClient = &http.Client{}
+	}
+	out := &twitch.Client{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		HttpClient:   httpClient,
+	}
+	return out, nil
+}

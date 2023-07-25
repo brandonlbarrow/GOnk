@@ -6,6 +6,7 @@ import (
 
 func RegisterRoutes(m *http.ServeMux) {
 	m.Handle("/", rootHandler())
+	m.Handle("/twitch/callback", twitchHandler())
 }
 
 func rootHandler() http.HandlerFunc {

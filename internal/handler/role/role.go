@@ -42,11 +42,14 @@ func (h *Handler) Handle(s *discordgo.Session, m *discordgo.MessageReactionAdd) 
 			fmt.Println(err)
 		}
 		return
-	}
-	if m.Emoji.Name == padawanEmoji {
+	} else if m.Emoji.Name == padawanEmoji {
 		if err := s.GuildMemberRoleAdd(m.GuildID, m.UserID, padawanRoleID); err != nil {
 			fmt.Println(err)
 		}
+		if err := s.MessageReactionRemove(m.ChannelID, m.MessageID, m.Emoji.APIName(), m.UserID); err != nil {
+			fmt.Println(err)
+		}
+	} else {
 		if err := s.MessageReactionRemove(m.ChannelID, m.MessageID, m.Emoji.APIName(), m.UserID); err != nil {
 			fmt.Println(err)
 		}

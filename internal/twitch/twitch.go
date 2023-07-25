@@ -14,7 +14,7 @@ const (
 	accessTokenEndpoint = "https://id.twitch.tv/oauth2/token"
 )
 
-type TwitchClient struct {
+type Client struct {
 	HttpClient   *http.Client
 	ClientID     string
 	ClientSecret string
@@ -26,11 +26,11 @@ type AuthResponse struct {
 	TokenType   string `json:"tokenType"`
 }
 
-func (t *TwitchClient) Auth() (*AuthResponse, error) {
+func (t *Client) Auth() (*AuthResponse, error) {
 	return t.sendAuthRequest()
 }
 
-func (t *TwitchClient) sendAuthRequest() (*AuthResponse, error) {
+func (t *Client) sendAuthRequest() (*AuthResponse, error) {
 
 	params := url.Values{}
 	params.Set("client_id", t.ClientID)
