@@ -101,3 +101,5 @@ func runCallbackServer(ctx context.Context, done chan error) error {
 	}
 	return nil
 }
+
+func setupTwitch(ctx context.Context) {}

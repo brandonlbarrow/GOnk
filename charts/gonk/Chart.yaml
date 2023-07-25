@@ -1,6 +1,0 @@
-apiVersion: v2
-name: gonk
-description: Installs GOnk, a Discord bot for The Cantina
-type: application
-version: 0.1.3
-appVersion: "1.0.0"
